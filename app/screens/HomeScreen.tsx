@@ -209,12 +209,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       case 'carousel':
         return item.data && item.data.length > 0 ? (
           <View style={styles.sectionContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Eventos Próximos</Text>
-            <EventCarousel 
-              events={item.data} 
-              onEventPress={handleEventPress} 
-            />
-          </View>
+          <EventList 
+            title="Eventos Próximos"
+            events={item.data}
+            onEventPress={handleEventPress}
+          />
+        </View>
         ) : null;
       case 'list':
         return item.data && item.data.length > 0 ? (
