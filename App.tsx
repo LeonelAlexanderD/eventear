@@ -1,14 +1,13 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
-import { StatusBar } from 'react-native';
 import { AuthScreen } from './app/screens/AuthScreen';
 import { CreateEventScreen } from './app/screens/CreateEventScreen';
 import { EditProfileScreen } from './app/screens/EditProfileScreen';
 import { EventDetailScreen } from './app/screens/EventDetailScreen';
 import { HomeScreen } from './app/screens/HomeScreen';
 import { ProfileScreen } from './app/screens/ProfileScreen';
-import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Event } from './types/event';
 
 export type RootStackParamList = {
@@ -23,14 +22,14 @@ export type RootStackParamList = {
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function AppNavigator() {
-  const { theme } = useTheme();
+  // const { theme } = useTheme();
   
   return (
     <>
-      <StatusBar 
+      {/* <StatusBar 
         barStyle={theme === 'dark' ? 'light-content' : 'dark-content'}
         backgroundColor={theme === 'dark' ? '#1a1a1a' : '#ffffff'}
-      />
+      /> */}
       <NavigationContainer>
         <Stack.Navigator>
           <Stack.Screen 

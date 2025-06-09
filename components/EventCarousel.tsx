@@ -21,7 +21,7 @@ export const EventCarousel: React.FC<EventCarouselProps> = ({ events, onEventPre
         keyExtractor={(item) => item.id}
         horizontal
         showsHorizontalScrollIndicator={false}
-        snapToAlignment="center"
+        snapToAlignment="start"
         snapToInterval={width - 32}
         decelerationRate="fast"
         contentContainerStyle={styles.contentContainer}

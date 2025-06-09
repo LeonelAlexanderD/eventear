@@ -11,7 +11,8 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   const formattedDate = format(new Date(event.date), 'dd MMM yyyy', { locale: es });
   const [imageLoading, setImageLoading] = React.useState(true);
   const [imageError, setImageError] = React.useState(false);
-
+  // || event?.image_url
+  
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor: colors.surface }]} 
@@ -23,7 +24,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
           <>
             <Image
               source={{ 
-                uri: event.image_url || 'https://via.placeholder.com/300x160?text=No+Image',
+                uri:  'https://convocatoria-fiesta-poncho.catamarca.gob.ar/wp-content/uploads/2025/04/fnp2025-2048x888.webp' ,
                 cache: 'force-cache'
               }}
               style={styles.image}
@@ -80,7 +81,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
-    margin: 8,
+    margin: 4,
     width: 300,
     overflow: 'hidden',
   },
