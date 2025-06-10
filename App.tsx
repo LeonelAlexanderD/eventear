@@ -5,6 +5,7 @@ import { AuthScreen } from './app/screens/AuthScreen';
 import { CreateEventScreen } from './app/screens/CreateEventScreen';
 import { EditProfileScreen } from './app/screens/EditProfileScreen';
 import { EventDetailScreen } from './app/screens/EventDetailScreen';
+import FavoritesScreen from './app/screens/FavoritesScreen';
 import { HomeScreen } from './app/screens/HomeScreen';
 import MyEventsScreen from './app/screens/MyEventsScreen';
 import { ProfileScreen } from './app/screens/ProfileScreen';
@@ -20,6 +21,7 @@ export type RootStackParamList = {
   CreateEvent: undefined;
   Search: undefined;
   MyEvents: undefined;
+  Favorites:undefined;
   EventDetail: { event: Event };
 };
 
@@ -91,6 +93,14 @@ function AppNavigator() {
             component={MyEventsScreen}
             options={{
               title: 'Mis Eventos',
+              headerShown: false
+            }}
+          />
+              <Stack.Screen
+            name="Favorites"
+            component={FavoritesScreen}
+            options={{
+              title: 'Mis Favoritos',
               headerShown: false
             }}
           />
