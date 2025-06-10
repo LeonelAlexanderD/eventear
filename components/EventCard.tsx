@@ -24,20 +24,26 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   const [imageLoading, setImageLoading] = React.useState(true);
   const [imageError, setImageError] = React.useState(false);
 
-  // Array de imágenes hardcodeadas para diferentes tipos de eventos
-  const eventImages = [
-    'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&h=600&fit=crop', // Música
-    'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop', // Concierto
-    'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop', // Festival
-    'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop', // Deportes
-    'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop', // Arte
-    'https://images.unsplash.com/photo-1414016642750-7fdd78dc33d9?w=800&h=600&fit=crop', // Comida
-  ];
+  // Array de imágenes de respaldo por categoría
+  const fallbackImages = {
+    musica: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&h=600&fit=crop',
+    concierto: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
+    festival: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop',
+    deportes: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop',
+    arte: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
+    comida: 'https://images.unsplash.com/photo-1414016642750-7fdd78dc33d9?w=800&h=600&fit=crop',
+    default: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&h=600&fit=crop'
+  };
 
-  // Seleccionar imagen basada en el ID del evento o usar una por defecto
   const getEventImage = () => {
-    const index = event.id ? parseInt(event.id.toString()) % eventImages.length : 0;
-    return eventImages[index];
+    // Si el evento tiene una imagen_url, usarla
+    if (event.image_url) {
+      return event.image_url;
+    }
+
+    // Si no tiene imagen, usar una imagen de respaldo según la categoría
+    const category = getEventCategory().toLowerCase();
+    return fallbackImages[category as keyof typeof fallbackImages] || fallbackImages.default;
   };
 
   // Determinar categoría del evento basado en el título (ejemplo)
