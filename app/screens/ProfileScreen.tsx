@@ -1,15 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useState } from 'react';
-import { Alert, FlatList, Image, Linking, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Image,
+  Linking,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
+
+const { width } = Dimensions.get('window');
 
 type RootStackParamList = {
   Home: undefined;
   Profile: undefined;
   EditProfile: undefined;
   CreateEvent: undefined;
+  MyEvents: undefined;
+  Favorites: undefined;
+  Notifications: undefined;
+  Settings: undefined;
 };
 
 type ProfileScreenProps = {
@@ -19,11 +38,26 @@ type ProfileScreenProps = {
 type MenuItem = {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
+  color?: string;
+  badge?: number;
+};
+
+type UserProfile = {
+  name: string;
+  email: string;
+  phone: string;
+  nickname: string;
+  birthYear: string;
+  instagram: string;
+  avatarUrl: string | null;
+  role: string;
+  bio?: string;
 };
 
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const { theme, colors } = useTheme();
+  const [loading, setLoading] = useState(true);
+  const { theme, colors, toggleTheme } = useTheme();
 
   useEffect(() => {
     loadProfile();
@@ -31,6 +65,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
 
   const loadProfile = async () => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No se encontró usuario');
 
@@ -42,11 +77,15 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
         birthYear: user.user_metadata.birthYear || '',
         instagram: user.user_metadata.instagram || '',
         avatarUrl: user.user_metadata.avatarUrl || null,
-        role: user.user_metadata.role || 'user'
+        role: user.user_metadata.role || 'user',
+        bio: user.user_metadata.bio || 'Amante de los eventos y experiencias únicas. ¡Siempre buscando nuevas aventuras!'
       });
     } catch (error) {
       console.error('Error loading profile:', error);
+      Alert.alert('Error', 'No se pudo cargar el perfil');
       navigation.goBack();
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,7 +103,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             await supabase.auth.signOut();
-            navigation.goBack();
+            navigation.navigate('Home');
           },
         },
       ],
@@ -81,152 +120,239 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const handleMenuItemPress = (title: string) => {
     switch (title) {
       case 'Preferencias':
-        // Implementar navegación a preferencias
+        navigation.navigate('Settings');
         break;
       case 'Favoritos':
-        // Implementar navegación a favoritos
-        break;
-      case 'Suscripciones':
-        // Implementar navegación a suscripciones
-        break;
-      case 'Notificaciones':
-        // Implementar navegación a notificaciones
+        navigation.navigate('Favorites');
         break;
       case 'Mis Eventos':
-        // Implementar navegación a mis eventos
+        navigation.navigate('MyEvents');
+        break;
+      case 'Notificaciones':
+        navigation.navigate('Notifications');
         break;
       case 'Crear Evento':
         navigation.navigate('CreateEvent');
+        break;
+      case 'Modo Oscuro':
+        toggleTheme();
         break;
     }
   };
 
   const menuItems: MenuItem[] = [
-    { icon: 'settings-outline', title: 'Preferencias' },
-    { icon: 'heart-outline', title: 'Favoritos' },
-    { icon: 'people-outline', title: 'Suscripciones' },
-    { icon: 'notifications-outline', title: 'Notificaciones' },
-    { icon: 'calendar-outline', title: 'Mis Eventos' },
-    { icon: 'add-circle-outline', title: 'Crear Evento' }
+    { icon: 'calendar-outline', title: 'Mis Eventos', color: '#FF6B6B', badge: 2 },
+    { icon: 'heart-outline', title: 'Favoritos', color: '#FF8E72', badge: 5 },
+    { icon: 'notifications-outline', title: 'Notificaciones', color: '#4ECDC4', badge: 3 },
+    { icon: 'add-circle-outline', title: 'Crear Evento', color: '#45B7D1' },
+    { icon: 'settings-outline', title: 'Preferencias', color: '#96CEB4' },
+    { icon: theme === 'dark' ? 'sunny-outline' : 'moon-outline', title: 'Modo Oscuro', color: '#FFCC5C' },
   ];
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.text }]}>Cargando perfil...</Text>
+      </SafeAreaView>
+    );
+  }
 
   if (!profile) return null;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header con gradiente */}
+        <LinearGradient
+          colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#667eea', '#764ba2']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.headerGradient}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Perfil</Text>
-        <TouchableOpacity 
-          onPress={() => navigation.navigate('EditProfile')}
-          style={styles.editButton}
-        >
-          <Ionicons name="create-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={[styles.profileSection, { backgroundColor: colors.surface }]}>
-        <View style={styles.avatarContainer}>
-          <View style={styles.avatarWrapper}>
-            {profile.avatarUrl ? (
-              <Image 
-                source={{ uri: profile.avatarUrl }}
-                style={[styles.avatar, { borderColor: colors.surface }]}
-              />
-            ) : (
-              <Ionicons name="person-circle" size={80} color={colors.text} />
-            )}
+          <View style={styles.headerContent}>
             <TouchableOpacity 
-              style={[styles.editAvatarButton, { borderColor: colors.surface }]}
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={() => navigation.goBack()} 
+              style={[styles.headerButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
             >
-              <Ionicons name="pencil" size={16} color="#ffffff" />
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Mi Perfil</Text>
+            
+            <TouchableOpacity 
+              onPress={() => navigation.navigate('EditProfile')}
+              style={[styles.headerButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+            >
+              <Ionicons name="create-outline" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
-        </View>
-        <Text style={[styles.userName, { color: colors.text }]}>{profile.name}</Text>
-        {profile.nickname && (
-          <Text style={[styles.userNickname, { color: colors.subtext }]}>@{profile.nickname}</Text>
-        )}
-        <Text style={[styles.userEmail, { color: colors.subtext }]}>{profile.email}</Text>
+        </LinearGradient>
 
-        <TouchableOpacity 
-          style={[styles.editProfileButton, { backgroundColor: theme === 'dark' ? '#404040' : '#f0f0f0' }]}
-          onPress={() => navigation.navigate('EditProfile')}
-        >
-          <Ionicons name="create-outline" size={20} color={colors.primary} />
-          <Text style={[styles.editProfileText, { color: colors.primary }]}>Editar Perfil</Text>
-        </TouchableOpacity>
-
-        <View style={styles.userInfoContainer}>
-          {profile.birthYear && (
-            <View style={styles.infoItem}>
-              <Ionicons name="calendar-outline" size={20} color={colors.subtext} />
-              <Text style={[styles.infoText, { color: colors.subtext }]}>{profile.birthYear}</Text>
+        {/* Tarjeta de perfil */}
+        <View style={[styles.profileCard, { backgroundColor: colors.surface }]}>
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarWrapper}>
+              {profile.avatarUrl ? (
+                <Image 
+                  source={{ uri: profile.avatarUrl }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={styles.avatarPlaceholder}
+                >
+                  <Text style={styles.avatarInitial}>
+                    {profile.name.charAt(0).toUpperCase()}
+                  </Text>
+                </LinearGradient>
+              )}
+              <TouchableOpacity 
+                style={styles.editAvatarButton}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Ionicons name="camera" size={16} color="#ffffff" />
+              </TouchableOpacity>
             </View>
-          )}
-          {profile.phone && (
-            <View style={styles.infoItem}>
-              <Ionicons name="call-outline" size={20} color={colors.subtext} />
-              <Text style={[styles.infoText, { color: colors.subtext }]}>{profile.phone}</Text>
-            </View>
-          )}
-          {profile.instagram && (
-            <TouchableOpacity 
-              style={styles.infoItem}
-              onPress={handleInstagramPress}
-            >
-              <Ionicons name="logo-instagram" size={20} color={colors.subtext} />
-              <Text style={[styles.infoText, styles.instagramText, { color: colors.primary }]}>
-                {profile.instagram}
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
 
-      <View style={[styles.menuContainer, { backgroundColor: colors.surface }]}>
-        <FlatList
-          data={menuItems}
-          keyExtractor={(item) => item.title}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.menuItem, { backgroundColor: colors.surface }]}
-              onPress={() => handleMenuItemPress(item.title)}
-            >
-              <View style={styles.menuItemContent}>
-                <Ionicons name={item.icon} size={24} color={colors.text} />
-                <Text style={[styles.menuItemText, { color: colors.text }]}>
-                  {item.title}
-                </Text>
+            <View style={styles.profileInfo}>
+              <Text style={[styles.userName, { color: colors.text }]}>{profile.name}</Text>
+              {profile.nickname && (
+                <Text style={[styles.userNickname, { color: colors.subtext }]}>@{profile.nickname}</Text>
+              )}
+              <View style={styles.roleBadge}>
+                <Text style={styles.roleText}>{profile.role === 'admin' ? 'Administrador' : 'Usuario'}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={24} color={colors.text} />
-            </TouchableOpacity>
-          )}
-        />
+            </View>
+          </View>
 
+          {/* Bio */}
+          {profile.bio && (
+            <View style={styles.bioContainer}>
+              <Text style={[styles.bioText, { color: colors.text }]}>
+                {profile.bio}
+              </Text>
+            </View>
+          )}
+
+          {/* Estadísticas */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>12</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Eventos</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>48</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Seguidores</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>156</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Siguiendo</Text>
+            </View>
+          </View>
+
+          {/* Información de contacto */}
+          <View style={styles.contactContainer}>
+            <View style={styles.contactItem}>
+              <View style={[styles.contactIconContainer, { backgroundColor: '#4ECDC4' + '20' }]}>
+                <Ionicons name="mail-outline" size={20} color="#4ECDC4" />
+              </View>
+              <Text style={[styles.contactText, { color: colors.text }]}>{profile.email}</Text>
+            </View>
+            
+            {profile.phone && (
+              <View style={styles.contactItem}>
+                <View style={[styles.contactIconContainer, { backgroundColor: '#FF6B6B' + '20' }]}>
+                  <Ionicons name="call-outline" size={20} color="#FF6B6B" />
+                </View>
+                <Text style={[styles.contactText, { color: colors.text }]}>{profile.phone}</Text>
+              </View>
+            )}
+            
+            {profile.instagram && (
+              <TouchableOpacity 
+                style={styles.contactItem}
+                onPress={handleInstagramPress}
+              >
+                <View style={[styles.contactIconContainer, { backgroundColor: '#E1306C' + '20' }]}>
+                  <Ionicons name="logo-instagram" size={20} color="#E1306C" />
+                </View>
+                <Text style={[styles.contactText, { color: '#E1306C' }]}>
+                  {profile.instagram}
+                </Text>
+              </TouchableOpacity>
+            )}
+            
+            {profile.birthYear && (
+              <View style={styles.contactItem}>
+                <View style={[styles.contactIconContainer, { backgroundColor: '#FFCC5C' + '20' }]}>
+                  <Ionicons name="calendar-outline" size={20} color="#FFCC5C" />
+                </View>
+                <Text style={[styles.contactText, { color: colors.text }]}>{profile.birthYear}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Menú de opciones */}
+        <View style={styles.menuSection}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Opciones</Text>
+          
+          <View style={[styles.menuContainer, { backgroundColor: colors.surface }]}>
+            {menuItems.map((item, index) => (
+              <TouchableOpacity
+                key={item.title}
+                style={[
+                  styles.menuItem, 
+                  { 
+                    backgroundColor: colors.surface,
+                    borderBottomWidth: index === menuItems.length - 1 ? 0 : 1,
+                    borderBottomColor: colors.border
+                  }
+                ]}
+                onPress={() => handleMenuItemPress(item.title)}
+              >
+                <View style={styles.menuItemContent}>
+                  <View style={[styles.menuIconContainer, { backgroundColor: item.color + '20' }]}>
+                    <Ionicons name={item.icon} size={22} color={item.color} />
+                  </View>
+                  <Text style={[styles.menuItemText, { color: colors.text }]}>
+                    {item.title}
+                  </Text>
+                </View>
+                
+                <View style={styles.menuItemRight}>
+                  {item.badge && (
+                    <View style={[styles.badgeContainer, { backgroundColor: item.color }]}>
+                      <Text style={styles.badgeText}>{item.badge}</Text>
+                    </View>
+                  )}
+                  <Ionicons name="chevron-forward" size={22} color={colors.subtext} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* Botón de cerrar sesión */}
         <TouchableOpacity 
-          style={[
-            styles.menuItem, 
-            styles.logoutButton, 
-            { 
-              borderTopColor: colors.border,
-              borderBottomColor: colors.border 
-            }
-          ]}
+          style={[styles.logoutButton, { backgroundColor: colors.surface }]}
           onPress={handleLogout}
         >
-          <Ionicons name="log-out-outline" size={24} color={colors.error} />
-          <Text style={[styles.menuItemText, styles.logoutText, { color: colors.error }]}>
+          <Ionicons name="log-out-outline" size={22} color={colors.error} />
+          <Text style={[styles.logoutText, { color: colors.error }]}>
             Cerrar sesión
           </Text>
         </TouchableOpacity>
-      </View>
+
+        {/* Versión de la app */}
+        <Text style={[styles.versionText, { color: colors.subtext }]}>
+          Evente-Ar v1.0.0
+        </Text>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -235,128 +361,245 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 48,
-    borderBottomWidth: 1,
+    justifyContent: 'space-between',
   },
-  backButton: {
-    padding: 8,
-  },
-  title: {
-    flex: 1,
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginLeft: 16,
-  },
-  editButton: {
-    padding: 8,
-  },
-  profileSection: {
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
   },
-  avatarContainer: {
-    marginBottom: 16,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  profileCard: {
+    marginTop: -20,
+    marginHorizontal: 16,
+    borderRadius: 20,
+    padding: 20,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+  },
+  avatarSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   avatarWrapper: {
     position: 'relative',
+    marginRight: 16,
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+  },
+  avatarPlaceholder: {
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarInitial: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   editAvatarButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#007AFF',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    backgroundColor: '#667eea',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    elevation: 2,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  profileInfo: {
+    flex: 1,
   },
   userName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 4,
   },
   userNickname: {
     fontSize: 16,
-    marginBottom: 4,
-  },
-  userEmail: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  editProfileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  editProfileText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 8,
-  },
-  userInfoContainer: {
-    width: '100%',
-    paddingHorizontal: 16,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 8,
   },
-  infoText: {
-    fontSize: 16,
-    marginLeft: 8,
+  roleBadge: {
+    backgroundColor: '#667eea',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
-  instagramText: {
-    color: '#007AFF',
+  roleText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bioContainer: {
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  bioText: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+    marginBottom: 16,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+  },
+  statDivider: {
+    width: 1,
+    height: '80%',
+    alignSelf: 'center',
+  },
+  contactContainer: {
+    marginBottom: 8,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  contactIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  contactText: {
+    fontSize: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    marginTop: 24,
   },
   menuContainer: {
-    marginTop: 16,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     padding: 16,
-    borderBottomWidth: 1,
-  },
-  menuItemText: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 16,
-  },
-  logoutButton: {
-    marginTop: 16,
-    borderTopWidth: 1,
-  },
-  logoutText: {
-    color: '#FF3B30',
   },
   menuItemContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-}); 
+  menuIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  menuItemText: {
+    fontSize: 16,
+  },
+  menuItemRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  badgeContainer: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    paddingHorizontal: 8,
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  menuSection: {
+    marginBottom: 16,
+  },
+  logoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 16,
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  versionText: {
+    textAlign: 'center',
+    fontSize: 12,
+    marginBottom: 30,
+  },
+});

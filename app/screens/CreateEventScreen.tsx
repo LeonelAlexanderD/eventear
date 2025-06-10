@@ -4,9 +4,12 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
+  Dimensions,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -22,6 +25,8 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
 import { Event } from '../../types/event';
 
+const { width } = Dimensions.get('window');
+
 type RootStackParamList = {
   Profile: undefined;
   CreateEvent: undefined;
@@ -35,19 +40,36 @@ type EventFormData = Omit<Event, 'id' | 'creator_id' | 'created_at' | 'updated_a
   end_time?: string;
 };
 
-const RequiredLabel: React.FC<{ label: string }> = ({ label }) => (
-  <Text style={styles.label}>
-    {label} <Text style={styles.required}>*</Text>
-  </Text>
-);
+const RequiredLabel: React.FC<{ label: string; icon?: keyof typeof Ionicons.glyphMap }> = ({ label, icon }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.labelContainer}>
+      {icon && <Ionicons name={icon} size={18} color={colors.primary} style={styles.labelIcon} />}
+      <Text style={[styles.label, { color: colors.text }]}>
+        {label} <Text style={styles.required}>*</Text>
+      </Text>
+    </View>
+  );
+};
+
+const OptionalLabel: React.FC<{ label: string; icon?: keyof typeof Ionicons.glyphMap }> = ({ label, icon }) => {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.labelContainer}>
+      {icon && <Ionicons name={icon} size={18} color={colors.subtext} style={styles.labelIcon} />}
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
+    </View>
+  );
+};
 
 export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation }) => {
-  const { colors } = useTheme();
+  const { colors, theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [imageLoading, setImageLoading] = useState(false);
   
   const [eventData, setEventData] = useState<EventFormData>({
     title: '',
@@ -65,6 +87,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
 
   const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
     try {
+      setImageLoading(true);
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: FileSystem.EncodingType.Base64,
         length: 524288,
@@ -91,12 +114,13 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     } catch (error) {
       console.error('Error subiendo imagen:', error);
       return null;
+    } finally {
+      setImageLoading(false);
     }
   };
 
   const handleImagePick = async () => {
     try {
-      // Solicitar permisos primero
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
@@ -111,15 +135,12 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
         quality: 0.8,
       });
 
-      console.log('ImagePicker result:', result);
-
       if (!result.canceled) {
         const imageUri = result.assets[0].uri;
-        console.log('Selected image URI:', imageUri);
         setPreviewImage(imageUri);
       }
     } catch (error) {
-      console.error('Error detallado al seleccionar imagen:', error);
+      console.error('Error al seleccionar imagen:', error);
       Alert.alert('Error', 'No se pudo seleccionar la imagen');
     }
   };
@@ -234,8 +255,9 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
 
       if (insertError) throw insertError;
 
-      Alert.alert('Éxito', 'Evento creado correctamente');
-      navigation.goBack();
+      Alert.alert('¡Éxito!', 'Evento creado correctamente', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     } catch (error: any) {
       console.error('Error creando evento:', error);
       Alert.alert('Error', error.message || 'No se pudo crear el evento');
@@ -244,20 +266,41 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { 
-        backgroundColor: colors.surface,
-        borderBottomColor: colors.border
-      }]}>
-        <TouchableOpacity 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Crear Evento</Text>
-      </View>
+      {/* Header con gradiente */}
+      <LinearGradient
+        colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#667eea', '#764ba2']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.headerGradient}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            onPress={() => navigation.goBack()} 
+            style={[styles.headerButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerTitleContainer}>
+            <Text style={styles.headerTitle}>Crear Evento</Text>
+            <Text style={styles.headerSubtitle}>Comparte tu experiencia</Text>
+          </View>
+          
+          <View style={styles.headerButton} />
+        </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -268,223 +311,328 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           style={styles.content}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <TouchableOpacity 
-            style={[styles.imageContainer, { backgroundColor: colors.border }]}
-            onPress={handleImagePick}
-          >
-            {(previewImage || eventData.image_url) ? (
-              <Image 
-                source={{ uri: previewImage || eventData.image_url! }} 
-                style={styles.eventImage}
+          {/* Sección de imagen */}
+          <View style={[styles.imageSection, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Imagen del Evento</Text>
+            <TouchableOpacity 
+              style={[styles.imageContainer, { borderColor: colors.border }]}
+              onPress={handleImagePick}
+              disabled={imageLoading}
+            >
+              {(previewImage || eventData.image_url) ? (
+                <View style={styles.imageWrapper}>
+                  <Image 
+                    source={{ uri: previewImage || eventData.image_url! }} 
+                    style={styles.eventImage}
+                  />
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.7)']}
+                    style={styles.imageOverlay}
+                  >
+                    <View style={styles.imageActions}>
+                      <TouchableOpacity 
+                        style={styles.changeImageButton}
+                        onPress={handleImagePick}
+                      >
+                        <Ionicons name="camera" size={20} color="#fff" />
+                        <Text style={styles.changeImageText}>Cambiar</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </LinearGradient>
+                </View>
+              ) : (
+                <View style={styles.imagePlaceholder}>
+                  {imageLoading ? (
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  ) : (
+                    <>
+                      <LinearGradient
+                        colors={['#667eea', '#764ba2']}
+                        style={styles.imagePlaceholderIcon}
+                      >
+                        <Ionicons name="image-outline" size={40} color="#fff" />
+                      </LinearGradient>
+                      <Text style={[styles.imagePlaceholderTitle, { color: colors.text }]}>
+                        Agregar Imagen
+                      </Text>
+                      <Text style={[styles.imagePlaceholderText, { color: colors.subtext }]}>
+                        Toca para seleccionar una imagen atractiva para tu evento
+                      </Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* Información básica */}
+          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Información Básica</Text>
+            
+            <View style={styles.inputGroup}>
+              <RequiredLabel label="Título del evento" icon="text-outline" />
+              <TextInput
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
+                value={eventData.title}
+                onChangeText={(text) => setEventData(prev => ({ ...prev, title: text }))}
+                placeholder="Ej: Concierto de Rock en el Parque"
+                placeholderTextColor={colors.subtext}
               />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Ionicons name="image-outline" size={40} color={colors.subtext} />
-                <Text style={[styles.imagePlaceholderText, { color: colors.subtext }]}>
-                  Toca para agregar una imagen *
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+            </View>
 
-          <View style={styles.form}>
-            <RequiredLabel label="Título del evento" />
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.title}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, title: text }))}
-              placeholder="Nombre del evento"
-              placeholderTextColor={colors.subtext}
-            />
+            <View style={styles.inputGroup}>
+              <OptionalLabel label="Descripción" icon="document-text-outline" />
+              <TextInput
+                style={[styles.textArea, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
+                value={eventData.description}
+                onChangeText={(text) => setEventData(prev => ({ ...prev, description: text }))}
+                placeholder="Describe tu evento, qué pueden esperar los asistentes..."
+                placeholderTextColor={colors.subtext}
+                multiline
+                numberOfLines={4}
+              />
+            </View>
 
-            <Text style={[styles.label, { color: colors.subtext }]}>Descripción</Text>
-            <TextInput
-              style={[styles.textArea, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.description}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, description: text }))}
-              placeholder="Describe tu evento"
-              placeholderTextColor={colors.subtext}
-              multiline
-              numberOfLines={4}
-            />
+            <View style={styles.inputGroup}>
+              <RequiredLabel label="Ubicación" icon="location-outline" />
+              <TextInput
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
+                value={eventData.location}
+                onChangeText={(text) => setEventData(prev => ({ ...prev, location: text }))}
+                placeholder="Ej: Teatro Municipal, Calle Principal 123"
+                placeholderTextColor={colors.subtext}
+              />
+            </View>
+          </View>
 
-            <View style={styles.dateTimeContainer}>
-              <View style={styles.dateContainer}>
-                <RequiredLabel label="Fecha" />
+          {/* Fecha y hora */}
+          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Fecha y Horario</Text>
+            
+            <View style={styles.dateTimeRow}>
+              <View style={styles.dateTimeItem}>
+                <RequiredLabel label="Fecha" icon="calendar-outline" />
                 <TouchableOpacity
                   style={[styles.dateTimeButton, { 
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.background,
                     borderColor: colors.border
                   }]}
                   onPress={() => setShowStartDatePicker(true)}
                 >
-                  <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                    {eventData.date}
-                  </Text>
+                  <View style={styles.dateTimeContent}>
+                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                      {new Date(eventData.date).toLocaleDateString('es-ES', { 
+                        day: '2-digit', 
+                        month: 'short' 
+                      })}
+                    </Text>
+                    <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
+                      {new Date(eventData.date).getFullYear()}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.timeContainer}>
-                <RequiredLabel label="Hora inicio" />
+              <View style={styles.dateTimeItem}>
+                <RequiredLabel label="Hora inicio" icon="time-outline" />
                 <TouchableOpacity
                   style={[styles.dateTimeButton, { 
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.background,
                     borderColor: colors.border
                   }]}
                   onPress={() => setShowStartTimePicker(true)}
                 >
-                  <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                    {eventData.time}
-                  </Text>
+                  <View style={styles.dateTimeContent}>
+                    <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                      {eventData.time}
+                    </Text>
+                    <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
+                      Inicio
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </View>
 
-            <View style={styles.timeContainer}>
-              <Text style={[styles.label, { color: colors.subtext }]}>Hora fin</Text>
+            <View style={styles.inputGroup}>
+              <OptionalLabel label="Hora de finalización" icon="time-outline" />
               <TouchableOpacity
                 style={[styles.dateTimeButton, { 
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.background,
                   borderColor: colors.border
                 }]}
                 onPress={() => setShowEndTimePicker(true)}
               >
-                <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                  {eventData.end_time || 'Seleccionar hora fin'}
-                </Text>
+                <View style={styles.dateTimeContent}>
+                  <Text style={[styles.dateTimeText, { color: colors.text }]}>
+                    {eventData.end_time || 'Sin hora de fin'}
+                  </Text>
+                  <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
+                    {eventData.end_time ? 'Finalización' : 'Toca para agregar'}
+                  </Text>
+                </View>
               </TouchableOpacity>
             </View>
-
-            {showStartDatePicker && (
-              <DateTimePicker
-                value={new Date(eventData.date)}
-                mode="date"
-                display="default"
-                onChange={handleStartDateChange}
-                minimumDate={new Date()}
-              />
-            )}
-
-            {showStartTimePicker && (
-              <DateTimePicker
-                value={new Date(`${eventData.date}T${eventData.time}`)}
-                mode="time"
-                display="default"
-                onChange={handleStartTimeChange}
-              />
-            )}
-
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
-                mode="time"
-                display="default"
-                onChange={handleEndTimeChange}
-              />
-            )}
-
-            <RequiredLabel label="Ubicación" />
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.location}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, location: text }))}
-              placeholder="Dirección del evento"
-              placeholderTextColor={colors.subtext}
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Precio de entrada</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_price?.toString() || ''}
-              onChangeText={(text) => {
-                const price = text === '' ? undefined : parseFloat(text);
-                if (text === '' || (!isNaN(price!) && price! >= 0)) {
-                  setEventData(prev => ({ ...prev, ticket_price: price }));
-                }
-              }}
-              placeholder="Dejar vacío si es gratuito"
-              placeholderTextColor={colors.subtext}
-              keyboardType="numeric"
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Stock de entradas</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_stock?.toString() || ''}
-              onChangeText={(text) => {
-                const stock = text === '' ? undefined : parseInt(text);
-                if (text === '' || (!isNaN(stock!) && stock! >= 0)) {
-                  setEventData(prev => ({ ...prev, ticket_stock: stock }));
-                }
-              }}
-              placeholder="Dejar vacío si no aplica"
-              placeholderTextColor={colors.subtext}
-              keyboardType="numeric"
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Punto de venta</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_sale_location}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, ticket_sale_location: text }))}
-              placeholder="Requerido si el evento es pago"
-              placeholderTextColor={colors.subtext}
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Anuncio especial</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.announcement}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, announcement: text }))}
-              placeholder="Anuncio opcional"
-              placeholderTextColor={colors.subtext}
-            />
           </View>
 
-          <TouchableOpacity 
-            style={[
-              styles.submitButton,
-              loading && styles.submitButtonDisabled,
-              { backgroundColor: colors.primary }
-            ]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Text style={styles.submitButtonText}>
-              {loading ? 'Creando evento...' : 'Crear evento'}
-            </Text>
-          </TouchableOpacity>
+          {/* Entradas y precios */}
+          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Entradas y Precios</Text>
+            
+            <View style={styles.priceRow}>
+              <View style={styles.priceItem}>
+                <OptionalLabel label="Precio" icon="card-outline" />
+                <TextInput
+                  style={[styles.input, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }]}
+                  value={eventData.ticket_price?.toString() || ''}
+                  onChangeText={(text) => {
+                    const price = text === '' ? undefined : parseFloat(text);
+                    if (text === '' || (!isNaN(price!) && price! >= 0)) {
+                      setEventData(prev => ({ ...prev, ticket_price: price }));
+                    }
+                  }}
+                  placeholder="Gratuito"
+                  placeholderTextColor={colors.subtext}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.priceItem}>
+                <OptionalLabel label="Stock" icon="ticket-outline" />
+                <TextInput
+                  style={[styles.input, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }]}
+                  value={eventData.ticket_stock?.toString() || ''}
+                  onChangeText={(text) => {
+                    const stock = text === '' ? undefined : parseInt(text);
+                    if (text === '' || (!isNaN(stock!) && stock! >= 0)) {
+                      setEventData(prev => ({ ...prev, ticket_stock: stock }));
+                    }
+                  }}
+                  placeholder="Ilimitado"
+                  placeholderTextColor={colors.subtext}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {eventData.ticket_price && (
+              <View style={styles.inputGroup}>
+                <RequiredLabel label="Punto de venta" icon="storefront-outline" />
+                <TextInput
+                  style={[styles.input, { 
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text
+                  }]}
+                  value={eventData.ticket_sale_location}
+                  onChangeText={(text) => setEventData(prev => ({ ...prev, ticket_sale_location: text }))}
+                  placeholder="Ej: Boletería del teatro, Online en eventbrite.com"
+                  placeholderTextColor={colors.subtext}
+                />
+              </View>
+            )}
+          </View>
+
+          {/* Información adicional */}
+          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Información Adicional</Text>
+            
+            <View style={styles.inputGroup}>
+              <OptionalLabel label="Anuncio especial" icon="megaphone-outline" />
+              <TextInput
+                style={[styles.input, { 
+                  backgroundColor: colors.background,
+                  borderColor: colors.border,
+                  color: colors.text
+                }]}
+                value={eventData.announcement}
+                onChangeText={(text) => setEventData(prev => ({ ...prev, announcement: text }))}
+                placeholder="Ej: ¡Últimas entradas disponibles!"
+                placeholderTextColor={colors.subtext}
+              />
+            </View>
+          </View>
+
+          {/* Date/Time Pickers */}
+          {showStartDatePicker && (
+            <DateTimePicker
+              value={new Date(eventData.date)}
+              mode="date"
+              display="default"
+              onChange={handleStartDateChange}
+              minimumDate={new Date()}
+            />
+          )}
+
+          {showStartTimePicker && (
+            <DateTimePicker
+              value={new Date(`${eventData.date}T${eventData.time}`)}
+              mode="time"
+              display="default"
+              onChange={handleStartTimeChange}
+            />
+          )}
+
+          {showEndTimePicker && (
+            <DateTimePicker
+              value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
+              mode="time"
+              display="default"
+              onChange={handleEndTimeChange}
+            />
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Botón de crear evento flotante */}
+      <View style={[styles.bottomContainer, { backgroundColor: colors.surface }]}>
+        <TouchableOpacity 
+          style={[
+            styles.submitButton,
+            loading && styles.submitButtonDisabled
+          ]}
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          <LinearGradient
+            colors={loading ? ['#ccc', '#999'] : ['#667eea', '#764ba2']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.submitButtonGradient}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons name="add-circle" size={24} color="#fff" />
+            )}
+            <Text style={styles.submitButtonText}>
+              {loading ? 'Creando evento...' : 'Crear Evento'}
+            </Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 };
@@ -493,111 +641,233 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
+  headerGradient: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: 48,
-    borderBottomWidth: 1,
+    justifyContent: 'space-between',
   },
-  backButton: {
-    padding: 8,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 24,
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    marginLeft: 16,
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
   },
   content: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  imageSection: {
+    margin: 16,
+    padding: 20,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
   imageContainer: {
     aspectRatio: 16 / 9,
-    margin: 16,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderStyle: 'dashed',
     overflow: 'hidden',
+  },
+  imageWrapper: {
+    flex: 1,
+    position: 'relative',
   },
   eventImage: {
     width: '100%',
     height: '100%',
   },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'flex-end',
+  },
+  imageActions: {
+    padding: 16,
+    alignItems: 'flex-end',
+  },
+  changeImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  changeImageText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '600',
+  },
   imagePlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  imagePlaceholderIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  imagePlaceholderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   imagePlaceholderText: {
-    marginTop: 8,
-    fontSize: 16,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  form: {
-    padding: 16,
+  formSection: {
+    margin: 16,
+    marginTop: 0,
+    padding: 20,
+    borderRadius: 16,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelIcon: {
+    marginRight: 8,
   },
   label: {
     fontSize: 16,
-    marginBottom: 8,
-    color: '#666',
+    fontWeight: '600',
   },
   required: {
-    color: '#ff0000',
+    color: '#FF6B6B',
+    fontWeight: 'bold',
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    marginBottom: 16,
   },
   textArea: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     fontSize: 16,
-    marginBottom: 16,
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  dateTimeContainer: {
+  dateTimeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 20,
   },
-  dateContainer: {
+  dateTimeItem: {
     flex: 1,
-    marginRight: 8,
-  },
-  timeContainer: {
-    flex: 1,
-    marginLeft: 8,
   },
   dateTimeButton: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
+  },
+  dateTimeContent: {
+    alignItems: 'center',
   },
   dateTimeText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  dateTimeSubText: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  priceItem: {
+    flex: 1,
+  },
+  bottomContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 20,
+    paddingBottom: 40,
+    elevation: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   submitButton: {
-    margin: 16,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
+    borderRadius: 25,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   submitButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.7,
+  },
+  submitButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    gap: 12,
   },
   submitButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: Platform.OS === 'ios' ? 90 : 70
-  },
-}); 
+});
