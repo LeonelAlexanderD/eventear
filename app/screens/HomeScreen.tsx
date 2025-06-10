@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { RootStackParamList } from '../../App';
-import { EventCarousel } from '../../components/EventCarousel';
+// import { EventCarousel } from '../../components/EventCarousel';
 import { EventList } from '../../components/EventList';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
@@ -295,7 +295,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#fff', '#f8f9fa']}
         style={styles.footer}
       >
-        <TouchableOpacity style={styles.footerButton}>
+        <TouchableOpacity 
+          style={styles.footerButton}
+          onPress={() => navigation.navigate('Search')}
+        >
           <Ionicons name="search" size={24} color={colors.subtext} />
           <Text style={[styles.footerButtonText, { color: colors.subtext }]}>Buscar</Text>
         </TouchableOpacity>
