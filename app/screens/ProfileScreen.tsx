@@ -125,14 +125,14 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       case 'Favoritos':
         navigation.navigate('Favorites');
         break;
-      case 'Mis Eventos':
-        navigation.navigate('MyEvents');
-        break;
       case 'Notificaciones':
         navigation.navigate('Notifications');
         break;
       case 'Crear Evento':
         navigation.navigate('CreateEvent');
+        break;
+        case 'Mis Eventos':
+        navigation.navigate('MyEvents');
         break;
       case 'Modo Oscuro':
         toggleTheme();

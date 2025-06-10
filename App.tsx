@@ -6,6 +6,7 @@ import { CreateEventScreen } from './app/screens/CreateEventScreen';
 import { EditProfileScreen } from './app/screens/EditProfileScreen';
 import { EventDetailScreen } from './app/screens/EventDetailScreen';
 import { HomeScreen } from './app/screens/HomeScreen';
+import MyEventsScreen from './app/screens/MyEventsScreen';
 import { ProfileScreen } from './app/screens/ProfileScreen';
 import SearchScreen from './app/screens/SearchScreen';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -18,6 +19,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   CreateEvent: undefined;
   Search: undefined;
+  MyEvents: undefined;
   EventDetail: { event: Event };
 };
 
@@ -82,6 +84,14 @@ function AppNavigator() {
             options={{
               title: 'Buscar Eventos',
               headerShown: true
+            }}
+          />
+           <Stack.Screen
+            name="MyEvents"
+            component={MyEventsScreen}
+            options={{
+              title: 'Mis Eventos',
+              headerShown: false
             }}
           />
         </Stack.Navigator>
