@@ -4,7 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Image,
@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { Event } from '../../types/event';
+import { Category, Event } from '../../types/event';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -48,6 +48,8 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   
   const [eventData, setEventData] = useState<EventFormData>({
     title: '',
@@ -62,6 +64,36 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     ticket_sale_location: '',
     announcement: ''
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      Alert.alert('Error', 'No se pudieron cargar las categorías');
+    }
+  };
+
+  const toggleCategory = (category: Category) => {
+    setSelectedCategories(prev => {
+      const isSelected = prev.some(cat => cat.id === category.id);
+      if (isSelected) {
+        return prev.filter(cat => cat.id !== category.id);
+      } else {
+        return [...prev, category];
+      }
+    });
+  };
 
   const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
     try {
@@ -181,6 +213,10 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
       Alert.alert('Error', 'La imagen es obligatoria');
       return false;
     }
+    if (selectedCategories.length === 0) {
+      Alert.alert('Error', 'Debes seleccionar al menos una categoría');
+      return false;
+    }
     if (eventData.ticket_price !== undefined && eventData.ticket_price < 0) {
       Alert.alert('Error', 'El precio no puede ser negativo');
       return false;
@@ -215,7 +251,8 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
         throw new Error('Error al subir la imagen');
       }
 
-      const { error: insertError } = await supabase
+      // Insertar el evento
+      const { data: newEvent, error: insertError } = await supabase
         .from('events')
         .insert({
           title: eventData.title,
@@ -230,9 +267,23 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           ticket_sale_location: eventData.ticket_sale_location || null,
           announcement: eventData.announcement || null,
           creator_id: user.id
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+
+      // Insertar las categorías del evento
+      const eventCategories = selectedCategories.map(category => ({
+        event_id: newEvent.id,
+        category_id: category.id
+      }));
+
+      const { error: categoriesError } = await supabase
+        .from('event_categories')
+        .insert(eventCategories);
+
+      if (categoriesError) throw categoriesError;
 
       Alert.alert('Éxito', 'Evento creado correctamente');
       navigation.goBack();
@@ -468,6 +519,31 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
               placeholder="Anuncio opcional"
               placeholderTextColor={colors.subtext}
             />
+
+            <RequiredLabel label="Categorías" />
+            <View style={styles.categoriesContainer}>
+              {categories.map(category => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChip,
+                    { borderColor: colors.primary }
+                  ]}
+                  onPress={() => toggleCategory(category)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChipText,
+                      { color: selectedCategories.some(cat => cat.id === category.id) ? '#fff' : colors.text }
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
 
           <TouchableOpacity 
@@ -599,5 +675,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingBottom: Platform.OS === 'ios' ? 90 : 70
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+    gap: 8,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedCategoryChip: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  categoryChipText: {
+    fontSize: 14,
+  },
+  selectedCategoryChipText: {
+    color: '#fff',
   },
 }); 

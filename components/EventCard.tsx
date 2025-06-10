@@ -36,33 +36,26 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
   };
 
   const getEventImage = () => {
-    // Si el evento tiene una imagen_url, usarla
+    // Si el evento tiene una image_url, usarla
     if (event.image_url) {
       return event.image_url;
     }
 
-    // Si no tiene imagen, usar una imagen de respaldo según la categoría
-    const category = getEventCategory().toLowerCase();
-    return fallbackImages[category as keyof typeof fallbackImages] || fallbackImages.default;
+    // Si no tiene imagen, usar una imagen de respaldo según la primera categoría
+    if (event.categories && event.categories.length > 0) {
+      const category = event.categories[0].name.toLowerCase();
+      return fallbackImages[category as keyof typeof fallbackImages] || fallbackImages.default;
+    }
+
+    return fallbackImages.default;
   };
 
-  // Determinar categoría del evento basado en el título (ejemplo)
-  const getEventCategory = () => {
-    const title = event.title.toLowerCase();
-    if (title.includes('música') || title.includes('concierto')) return 'Música';
-    if (title.includes('deporte') || title.includes('fútbol')) return 'Deportes';
-    if (title.includes('arte') || title.includes('exposición')) return 'Arte';
-    if (title.includes('comida') || title.includes('gastronómico')) return 'Gastronomía';
-    return 'Evento';
-  };
-
-  const getCategoryColor = () => {
-    const category = getEventCategory();
-    switch (category) {
-      case 'Música': return '#FF6B6B';
-      case 'Deportes': return '#4ECDC4';
-      case 'Arte': return '#45B7D1';
-      case 'Gastronomía': return '#96CEB4';
+  const getCategoryColor = (categoryName: string) => {
+    switch (categoryName.toLowerCase()) {
+      case 'música': return '#FF6B6B';
+      case 'deportes': return '#4ECDC4';
+      case 'arte': return '#45B7D1';
+      case 'gastronomía': return '#96CEB4';
       default: return colors.primary;
     }
   };
@@ -95,9 +88,19 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
               style={styles.imageOverlay}
             />
             
-            {/* Badge de categoría */}
-            <View style={[styles.categoryBadge, { backgroundColor: getCategoryColor() }]}>
-              <Text style={styles.categoryText}>{getEventCategory()}</Text>
+            {/* Badges de categorías */}
+            <View style={styles.categoriesContainer}>
+              {event.categories?.map((category, index) => (
+                <View 
+                  key={category.id}
+                  style={[
+                    styles.categoryBadge, 
+                    { backgroundColor: getCategoryColor(category.name) }
+                  ]}
+                >
+                  <Text style={styles.categoryText}>{category.name}</Text>
+                </View>
+              ))}
             </View>
 
             {/* Indicador de favorito */}
@@ -135,7 +138,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
         <View style={styles.detailsContainer}>
           {/* Fecha y hora */}
           <View style={styles.dateTimeContainer}>
-            <View style={[styles.dateCard, { backgroundColor: getCategoryColor() }]}>
+            <View style={[styles.dateCard, { backgroundColor: event.categories?.[0] ? getCategoryColor(event.categories[0].name) : colors.primary }]}>
               <Text style={styles.dayText}>
                 {format(new Date(event.date), 'dd', { locale: es })}
               </Text>
@@ -161,14 +164,17 @@ export const EventCard: React.FC<EventCardProps> = ({ event, onPress }) => {
         {/* Footer con precio y botón */}
         <View style={styles.footerContainer}>
           <View style={styles.priceContainer}>
-            <Text style={[styles.priceLabel, { color: colors.subtext }]}>Desde</Text>
-            {/* <Text style={[styles.priceText, { color: getCategoryColor() }]}>
-              ${event.price || '2,500'}
-            </Text> */}
+            <Text style={[styles.priceLabel, { color: colors.subtext }]}>
+              {event.ticket_price ? `$${event.ticket_price}` : 'Gratis'}
+            </Text>
           </View>
           
           <TouchableOpacity 
-            style={[styles.actionButton, { backgroundColor: getCategoryColor() }]}
+            style={[styles.actionButton, { 
+              backgroundColor: event.categories?.[0] 
+                ? getCategoryColor(event.categories[0].name) 
+                : colors.primary 
+            }]}
             onPress={() => onPress(event)}
           >
             <Text style={styles.actionButtonText}>Ver más</Text>
@@ -217,10 +223,15 @@ const styles = StyleSheet.create({
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
-  categoryBadge: {
+  categoriesContainer: {
     position: 'absolute',
     top: 12,
     left: 12,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  categoryBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -286,17 +297,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateCard: {
-    width: 50,
-    height: 60,
+    padding: 8,
     borderRadius: 12,
-    justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    minWidth: 60,
   },
   dayText: {
     color: '#fff',
@@ -305,53 +309,46 @@ const styles = StyleSheet.create({
   },
   monthText: {
     color: '#fff',
-    fontSize: 10,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
   },
   dateTimeInfo: {
+    marginLeft: 12,
     flex: 1,
-    gap: 8,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 4,
   },
   timeText: {
-    fontSize: 16,
-    fontWeight: '600',
+    marginLeft: 6,
+    fontSize: 14,
+    fontWeight: '500',
   },
   locationText: {
+    marginLeft: 6,
     fontSize: 14,
-    flex: 1,
   },
   footerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 8,
   },
   priceContainer: {
     flex: 1,
   },
   priceLabel: {
-    fontSize: 12,
-  },
-  priceText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 14,
   },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
     gap: 8,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   actionButtonText: {
     color: '#fff',
@@ -360,22 +357,22 @@ const styles = StyleSheet.create({
   },
   popularityIndicator: {
     position: 'absolute',
-    bottom: 20,
-    left: 20,
+    top: 180,
+    right: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     gap: 4,
-    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   popularityText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
   },
 });

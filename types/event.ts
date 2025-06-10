@@ -1,3 +1,9 @@
+export type Category = {
+  id: string;
+  name: string;
+  description?: string;
+};
+
 export type Event = {
   id: string;
   creator_id: string;
@@ -14,6 +20,7 @@ export type Event = {
   announcement?: string;
   created_at: string;
   updated_at: string;
+  categories?: Category[];
 };
 
 export interface EventCardProps {
