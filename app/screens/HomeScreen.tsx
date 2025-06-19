@@ -1,35 +1,34 @@
-import { Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Session } from '@supabase/supabase-js';
-import React, { useEffect, useState } from 'react';
-import { 
-  FlatList, 
-  RefreshControl, 
-  SafeAreaView, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View,
-  Image,
+import { Ionicons } from "@expo/vector-icons";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { Session } from "@supabase/supabase-js";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
+import {
   Dimensions,
-  ScrollView
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { RootStackParamList } from '../../App';
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { RootStackParamList } from "../../App";
 // import { EventCarousel } from '../../components/EventCarousel';
-import { EventList } from '../../components/EventList';
-import { useTheme } from '../../contexts/ThemeContext';
-import { supabase } from '../../lib/supabase';
-import { Event } from '../../types/event';
+import { EventList } from "../../components/EventList";
+import { useTheme } from "../../contexts/ThemeContext";
+import { supabase } from "../../lib/supabase";
+import { Event } from "../../types/event";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 type HomeScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "Home">;
 };
 
 type SectionType = {
-  type: 'banner' | 'carousel' | 'list' | 'categories';
+  type: "banner" | "carousel" | "list" | "categories";
   data?: Event[];
 };
 
@@ -39,13 +38,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [featuredEvent, setFeaturedEvent] = useState<Event | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
   const { theme, toggleTheme, colors } = useTheme();
 
   useEffect(() => {
     fetchEvents();
     checkSession();
+    fetchCategories();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
@@ -55,7 +58,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   }, []);
 
   const checkSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
     setSession(session);
   };
 
@@ -66,36 +71,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       thirtyDaysFromNow.setDate(today.getDate() + 30);
 
       const { data: events, error } = await supabase
-        .from('events')
-        .select('*')
-        .gte('date', today.toISOString().split('T')[0])
-        .lte('date', thirtyDaysFromNow.toISOString().split('T')[0])
-        .order('date', { ascending: true });
+        .from("events")
+        .select("*")
+        .gte("date", today.toISOString().split("T")[0])
+        .lte("date", thirtyDaysFromNow.toISOString().split("T")[0])
+        .order("date", { ascending: true });
 
       if (error) throw error;
 
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(today.getDate() + 7);
 
-      const upcoming = events?.filter((event: Event) => 
-        new Date(event.date) <= sevenDaysFromNow
-      ) || [];
-      const nextMonth = events?.filter((event: Event) => 
-        new Date(event.date) > sevenDaysFromNow
-      ) || [];
+      const upcoming =
+        events?.filter(
+          (event: Event) => new Date(event.date) <= sevenDaysFromNow
+        ) || [];
+      const nextMonth =
+        events?.filter(
+          (event: Event) => new Date(event.date) > sevenDaysFromNow
+        ) || [];
 
       setUpcomingEvents(upcoming);
       setNextMonthEvents(nextMonth);
-      
+
       // Establecer evento destacado (el más próximo o uno específico)
       if (upcoming.length > 0) {
         setFeaturedEvent(upcoming[0]);
       }
     } catch (error: unknown) {
       if (error instanceof Error) {
-        console.error('Error fetching events:', error.message);
+        console.error("Error fetching events:", error.message);
       } else {
-        console.error('Error desconocido al obtener eventos');
+        console.error("Error desconocido al obtener eventos");
       }
     }
   };
@@ -107,21 +114,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   };
 
   const handleEventPress = (event: Event) => {
-    navigation.navigate('EventDetail', { event });
+    navigation.navigate("EventDetail", { event });
   };
 
   const handleAccountPress = () => {
     if (session) {
-      navigation.navigate('Profile');
+      navigation.navigate("Profile");
     } else {
-      navigation.navigate('Auth');
+      navigation.navigate("Auth");
     }
   };
 
   const renderPromoBanner = () => (
     <View style={styles.bannerContainer}>
       <LinearGradient
-        colors={theme === 'dark' ? ['#1a1a2e', '#16213e'] : ['#667eea', '#764ba2']}
+        colors={
+          theme === "dark" ? ["#1a1a2e", "#16213e"] : ["#667eea", "#764ba2"]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.promoBanner}
@@ -130,9 +139,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.bannerTextContainer}>
             <Text style={styles.bannerTitle}>🎉 ¡Evento Especial!</Text>
             <Text style={styles.bannerSubtitle}>
-              {featuredEvent ? featuredEvent.title : 'Descubre eventos increíbles'}
+              {featuredEvent
+                ? featuredEvent.title
+                : "Descubre eventos increíbles"}
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.bannerButton}
               onPress={() => featuredEvent && handleEventPress(featuredEvent)}
             >
@@ -150,21 +161,27 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
   const renderCategories = () => (
     <View style={styles.categoriesContainer}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>Categorías</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-        {[
-          { name: 'Música', icon: 'musical-notes', color: '#FF6B6B' },
-          { name: 'Deportes', icon: 'football', color: '#4ECDC4' },
-          { name: 'Arte', icon: 'brush', color: '#45B7D1' },
-          { name: 'Comida', icon: 'restaurant', color: '#96CEB4' },
-          { name: 'Tecnología', icon: 'laptop', color: '#FFEAA7' },
-          { name: 'Cultura', icon: 'library', color: '#DDA0DD' },
-        ].map((category, index) => (
-          <TouchableOpacity key={index} style={[styles.categoryCard, { backgroundColor: category.color }]}>
-            <Ionicons name={category.icon as any} size={24} color="#fff" />
-            <Text style={styles.categoryText}>{category.name}</Text>
-          </TouchableOpacity>
-        ))}
+      <Text style={[styles.sectionTitle, { color: colors.text }]}>
+        Categorías
+      </Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoriesScroll}
+      >
+        {categories.map((category, index) => {
+          const { icon, color } =
+            categoryIconColorMap[category.name] || defaultIconColor;
+          return (
+            <TouchableOpacity
+              key={category.id}
+              style={[styles.categoryCard, { backgroundColor: color }]}
+            >
+              <Ionicons name={icon} size={24} color="#fff" />
+              <Text style={styles.categoryText}>{category.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
@@ -172,54 +189,64 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const renderStatsCard = () => (
     <View style={[styles.statsContainer, { backgroundColor: colors.surface }]}>
       <View style={styles.statItem}>
-        <Text style={[styles.statNumber, { color: colors.primary }]}>{upcomingEvents.length}</Text>
-        <Text style={[styles.statLabel, { color: colors.subtext }]}>Esta semana</Text>
+        <Text style={[styles.statNumber, { color: colors.primary }]}>
+          {upcomingEvents.length}
+        </Text>
+        <Text style={[styles.statLabel, { color: colors.subtext }]}>
+          Esta semana
+        </Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
-        <Text style={[styles.statNumber, { color: colors.primary }]}>{nextMonthEvents.length}</Text>
-        <Text style={[styles.statLabel, { color: colors.subtext }]}>Este mes</Text>
+        <Text style={[styles.statNumber, { color: colors.primary }]}>
+          {nextMonthEvents.length}
+        </Text>
+        <Text style={[styles.statLabel, { color: colors.subtext }]}>
+          Este mes
+        </Text>
       </View>
       <View style={styles.statDivider} />
       <View style={styles.statItem}>
         <Text style={[styles.statNumber, { color: colors.primary }]}>12</Text>
-        <Text style={[styles.statLabel, { color: colors.subtext }]}>Favoritos</Text>
+        <Text style={[styles.statLabel, { color: colors.subtext }]}>
+          Favoritos
+        </Text>
       </View>
     </View>
   );
 
   const sections: SectionType[] = [
-    { type: 'banner' },
-    { type: 'categories' },
-    { type: 'carousel', data: upcomingEvents },
-    { type: 'list', data: nextMonthEvents }
+    { type: "banner" },
+    { type: "categories" },
+    { type: "carousel", data: upcomingEvents },
+    { type: "list", data: nextMonthEvents },
   ];
 
   const renderItem = ({ item }: { item: SectionType }) => {
     switch (item.type) {
-      case 'banner':
+      case "banner":
         return (
           <View>
             {renderPromoBanner()}
             {renderStatsCard()}
           </View>
         );
-      case 'categories':
+      case "categories":
         return renderCategories();
-      case 'carousel':
+      case "carousel":
         return item.data && item.data.length > 0 ? (
           <View style={styles.sectionContainer}>
-          <EventList 
-            title="Eventos Próximos"
-            events={item.data}
-            onEventPress={handleEventPress}
-          />
-        </View>
+            <EventList
+              title="Eventos Próximos"
+              events={item.data}
+              onEventPress={handleEventPress}
+            />
+          </View>
         ) : null;
-      case 'list':
+      case "list":
         return item.data && item.data.length > 0 ? (
           <View style={styles.sectionContainer}>
-            <EventList 
+            <EventList
               title="Más Eventos"
               events={item.data}
               onEventPress={handleEventPress}
@@ -231,45 +258,88 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
+  // Mapeo de iconos y colores por nombre de categoría
+  const categoryIconColorMap: Record<
+    string,
+    { icon: keyof typeof Ionicons.glyphMap; color: string }
+  > = {
+    Música: { icon: "musical-notes", color: "#FF6B6B" },
+    Deportes: { icon: "football", color: "#4ECDC4" },
+    Arte: { icon: "brush", color: "#45B7D1" },
+    Comida: { icon: "restaurant", color: "#96CEB4" },
+    Tecnología: { icon: "laptop", color: "#FFEAA7" },
+    Cultura: { icon: "library", color: "#DDA0DD" },
+    // Puedes agregar más mapeos aquí
+  };
+  const defaultIconColor = { icon: "pricetag", color: "#667eea" };
+
+  // Función para obtener categorías desde Supabase
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("name");
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error al obtener categorías:", error);
+    }
+  };
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header mejorado */}
       <LinearGradient
-        colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#E5F3FF', '#F8FBFF']}
+        colors={
+          theme === "dark" ? ["#2C3E50", "#34495E"] : ["#E5F3FF", "#F8FBFF"]
+        }
         style={styles.header}
       >
-        <TouchableOpacity 
-          onPress={toggleTheme}
-          style={styles.themeButton}
-        >
-          <Ionicons 
-            name={theme === 'dark' ? 'sunny' : 'moon'} 
-            size={24} 
-            color={theme === 'dark' ? '#F39C12' : '#333'}
+        <TouchableOpacity onPress={toggleTheme} style={styles.themeButton}>
+          <Ionicons
+            name={theme === "dark" ? "sunny" : "moon"}
+            size={24}
+            color={theme === "dark" ? "#F39C12" : "#333"}
           />
         </TouchableOpacity>
-        
+
         <View style={styles.titleContainer}>
           <View style={styles.logoContainer}>
             <Ionicons name="calendar" size={28} color="#667eea" />
           </View>
           <View>
-            <Text style={[styles.title, { color: theme === 'dark' ? '#fff' : '#333' }]}>
+            <Text
+              style={[
+                styles.title,
+                { color: theme === "dark" ? "#fff" : "#333" },
+              ]}
+            >
               Evente-Ar
             </Text>
-            <Text style={[styles.subtitle, { color: theme === 'dark' ? '#BDC3C7' : '#666' }]}>
+            <Text
+              style={[
+                styles.subtitle,
+                { color: theme === "dark" ? "#BDC3C7" : "#666" },
+              ]}
+            >
               Descubre eventos increíbles
             </Text>
           </View>
         </View>
-        
-        <TouchableOpacity 
-          onPress={handleAccountPress} 
-          style={[styles.profileButton, { backgroundColor: session ? '#27AE60' : '#E74C3C' }]}
+
+        <TouchableOpacity
+          onPress={handleAccountPress}
+          style={[
+            styles.profileButton,
+            { backgroundColor: session ? "#27AE60" : "#E74C3C" },
+          ]}
         >
-          <Ionicons 
-            name={session ? "person" : "person-add"} 
-            size={20} 
+          <Ionicons
+            name={session ? "person" : "person-add"}
+            size={20}
             color="#fff"
           />
         </TouchableOpacity>
@@ -292,28 +362,39 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       {/* Footer mejorado */}
       <LinearGradient
-        colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#fff', '#f8f9fa']}
+        colors={theme === "dark" ? ["#2C3E50", "#34495E"] : ["#fff", "#f8f9fa"]}
         style={styles.footer}
       >
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.footerButton}
-          onPress={() => navigation.navigate('Search')}
+          onPress={() => navigation.navigate("Search")}
         >
           <Ionicons name="search" size={24} color={colors.subtext} />
-          <Text style={[styles.footerButtonText, { color: colors.subtext }]}>Buscar</Text>
+          <Text style={[styles.footerButtonText, { color: colors.subtext }]}>
+            Buscar
+          </Text>
         </TouchableOpacity>
-        
-        <TouchableOpacity 
+
+        <TouchableOpacity
           style={[styles.footerButton, styles.footerButtonActive]}
         >
-          <View style={[styles.activeIndicator, { backgroundColor: colors.primary }]} />
+          <View
+            style={[
+              styles.activeIndicator,
+              { backgroundColor: colors.primary },
+            ]}
+          />
           <Ionicons name="home" size={24} color={colors.primary} />
-          <Text style={[styles.footerButtonText, { color: colors.primary }]}>Inicio</Text>
+          <Text style={[styles.footerButtonText, { color: colors.primary }]}>
+            Inicio
+          </Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.footerButton}>
           <Ionicons name="compass" size={24} color={colors.subtext} />
-          <Text style={[styles.footerButtonText, { color: colors.subtext }]}>Explorar</Text>
+          <Text style={[styles.footerButtonText, { color: colors.subtext }]}>
+            Explorar
+          </Text>
         </TouchableOpacity>
       </LinearGradient>
     </SafeAreaView>
@@ -325,14 +406,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingTop: 48,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -340,11 +421,11 @@ const styles = StyleSheet.create({
   themeButton: {
     padding: 12,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
   },
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
     marginLeft: 16,
   },
@@ -352,19 +433,19 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(255,255,255,0.9)",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   subtitle: {
     fontSize: 12,
@@ -374,10 +455,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -390,66 +471,66 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
   bannerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   bannerTextContainer: {
     flex: 1,
   },
   bannerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
     marginBottom: 4,
   },
   bannerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.9)',
+    color: "rgba(255,255,255,0.9)",
     marginBottom: 12,
   },
   bannerButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
   },
   bannerButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+    color: "#fff",
+    fontWeight: "600",
     marginRight: 8,
   },
   bannerIconContainer: {
     marginLeft: 16,
   },
   statsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginHorizontal: 16,
     marginBottom: 8,
     borderRadius: 12,
     padding: 16,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   statLabel: {
     fontSize: 12,
@@ -457,7 +538,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: "#E0E0E0",
     marginHorizontal: 16,
   },
   categoriesContainer: {
@@ -470,48 +551,48 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
   categoryText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: "600",
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
   sectionContainer: {
     marginVertical: 8,
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginHorizontal: 16,
     marginBottom: 12,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-around",
+    alignItems: "center",
     paddingVertical: 12,
     paddingBottom: 32,
     elevation: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
   footerButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 8,
     paddingHorizontal: 16,
-    position: 'relative',
+    position: "relative",
   },
   footerButtonActive: {
     transform: [{ scale: 1.1 }],
@@ -519,10 +600,10 @@ const styles = StyleSheet.create({
   footerButtonText: {
     fontSize: 10,
     marginTop: 4,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   activeIndicator: {
-    position: 'absolute',
+    position: "absolute",
     top: -2,
     width: 4,
     height: 4,
