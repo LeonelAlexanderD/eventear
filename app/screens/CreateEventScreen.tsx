@@ -5,7 +5,7 @@ import { decode } from 'base64-arraybuffer';
 import * as FileSystem from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
 import { supabase } from '../../lib/supabase';
-import { Event } from '../../types/event';
+import { Category, Event } from '../../types/event';
 
 const { width } = Dimensions.get('window');
 
@@ -69,6 +69,8 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [imageLoading, setImageLoading] = useState(false);
   
   const [eventData, setEventData] = useState<EventFormData>({
@@ -84,6 +86,36 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     ticket_sale_location: '',
     announcement: ''
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      Alert.alert('Error', 'No se pudieron cargar las categorías');
+    }
+  };
+
+  const toggleCategory = (category: Category) => {
+    setSelectedCategories(prev => {
+      const isSelected = prev.some(cat => cat.id === category.id);
+      if (isSelected) {
+        return prev.filter(cat => cat.id !== category.id);
+      } else {
+        return [...prev, category];
+      }
+    });
+  };
 
   const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
     try {
@@ -202,6 +234,10 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
       Alert.alert('Error', 'La imagen es obligatoria');
       return false;
     }
+    if (selectedCategories.length === 0) {
+      Alert.alert('Error', 'Debes seleccionar al menos una categoría');
+      return false;
+    }
     if (eventData.ticket_price !== undefined && eventData.ticket_price < 0) {
       Alert.alert('Error', 'El precio no puede ser negativo');
       return false;
@@ -236,7 +272,8 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
         throw new Error('Error al subir la imagen');
       }
 
-      const { error: insertError } = await supabase
+      // Insertar el evento
+      const { data: newEvent, error: insertError } = await supabase
         .from('events')
         .insert({
           title: eventData.title,
@@ -251,9 +288,23 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           ticket_sale_location: eventData.ticket_sale_location || null,
           announcement: eventData.announcement || null,
           creator_id: user.id
-        });
+        })
+        .select()
+        .single();
 
       if (insertError) throw insertError;
+
+      // Insertar las categorías del evento
+      const eventCategories = selectedCategories.map(category => ({
+        event_id: newEvent.id,
+        category_id: category.id
+      }));
+
+      const { error: categoriesError } = await supabase
+        .from('event_categories')
+        .insert(eventCategories);
+
+      if (categoriesError) throw categoriesError;
 
       Alert.alert('¡Éxito!', 'Evento creado correctamente', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -595,6 +646,127 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
             />
           )}
 
+            {showEndTimePicker && (
+              <DateTimePicker
+                value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
+                mode="time"
+                display="default"
+                onChange={handleEndTimeChange}
+              />
+            )}
+
+            <RequiredLabel label="Ubicación" />
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={eventData.location}
+              onChangeText={(text) => setEventData(prev => ({ ...prev, location: text }))}
+              placeholder="Dirección del evento"
+              placeholderTextColor={colors.subtext}
+            />
+
+            <Text style={[styles.label, { color: colors.subtext }]}>Precio de entrada</Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={eventData.ticket_price?.toString() || ''}
+              onChangeText={(text) => {
+                const price = text === '' ? undefined : parseFloat(text);
+                if (text === '' || (!isNaN(price!) && price! >= 0)) {
+                  setEventData(prev => ({ ...prev, ticket_price: price }));
+                }
+              }}
+              placeholder="Dejar vacío si es gratuito"
+              placeholderTextColor={colors.subtext}
+              keyboardType="numeric"
+            />
+
+            <Text style={[styles.label, { color: colors.subtext }]}>Stock de entradas</Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={eventData.ticket_stock?.toString() || ''}
+              onChangeText={(text) => {
+                const stock = text === '' ? undefined : parseInt(text);
+                if (text === '' || (!isNaN(stock!) && stock! >= 0)) {
+                  setEventData(prev => ({ ...prev, ticket_stock: stock }));
+                }
+              }}
+              placeholder="Dejar vacío si no aplica"
+              placeholderTextColor={colors.subtext}
+              keyboardType="numeric"
+            />
+
+            <Text style={[styles.label, { color: colors.subtext }]}>Punto de venta</Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={eventData.ticket_sale_location}
+              onChangeText={(text) => setEventData(prev => ({ ...prev, ticket_sale_location: text }))}
+              placeholder="Requerido si el evento es pago"
+              placeholderTextColor={colors.subtext}
+            />
+
+            <Text style={[styles.label, { color: colors.subtext }]}>Anuncio especial</Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text
+              }]}
+              value={eventData.announcement}
+              onChangeText={(text) => setEventData(prev => ({ ...prev, announcement: text }))}
+              placeholder="Anuncio opcional"
+              placeholderTextColor={colors.subtext}
+            />
+
+            <RequiredLabel label="Categorías" />
+            <View style={styles.categoriesContainer}>
+              {categories.map(category => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChip,
+                    { borderColor: colors.primary }
+                  ]}
+                  onPress={() => toggleCategory(category)}
+                >
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChipText,
+                      { color: selectedCategories.some(cat => cat.id === category.id) ? '#fff' : colors.text }
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={[
+              styles.submitButton,
+              loading && styles.submitButtonDisabled,
+              { backgroundColor: colors.primary }
+            ]}
+            onPress={handleSubmit}
+            disabled={loading}
+          >
           {showEndTimePicker && (
             <DateTimePicker
               value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
@@ -870,4 +1042,36 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: Platform.OS === 'ios' ? 90 : 70
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+    gap: 8,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  selectedCategoryChip: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  categoryChipText: {
+    fontSize: 14,
+  },
+  selectedCategoryChipText: {
+    color: '#fff',
+  },
+}); 
 });
