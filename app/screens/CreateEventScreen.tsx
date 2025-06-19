@@ -1,11 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { decode } from 'base64-arraybuffer';
-import * as FileSystem from 'expo-file-system';
-import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useState } from 'react';
+import { Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { decode } from "base64-arraybuffer";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -19,13 +19,13 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
-} from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
-import { supabase } from '../../lib/supabase';
-import { Category, Event } from '../../types/event';
+  View,
+} from "react-native";
+import { useTheme } from "../../contexts/ThemeContext";
+import { supabase } from "../../lib/supabase";
+import { Category, Event } from "../../types/event";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 type RootStackParamList = {
   Profile: undefined;
@@ -33,18 +33,31 @@ type RootStackParamList = {
 };
 
 type CreateEventScreenProps = {
-  navigation: NativeStackNavigationProp<RootStackParamList, 'CreateEvent'>;
+  navigation: NativeStackNavigationProp<RootStackParamList, "CreateEvent">;
 };
 
-type EventFormData = Omit<Event, 'id' | 'creator_id' | 'created_at' | 'updated_at'> & {
+type EventFormData = Omit<
+  Event,
+  "id" | "creator_id" | "created_at" | "updated_at"
+> & {
   end_time?: string;
 };
 
-const RequiredLabel: React.FC<{ label: string; icon?: keyof typeof Ionicons.glyphMap }> = ({ label, icon }) => {
+const RequiredLabel: React.FC<{
+  label: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+}> = ({ label, icon }) => {
   const { colors } = useTheme();
   return (
     <View style={styles.labelContainer}>
-      {icon && <Ionicons name={icon} size={18} color={colors.primary} style={styles.labelIcon} />}
+      {icon && (
+        <Ionicons
+          name={icon}
+          size={18}
+          color={colors.primary}
+          style={styles.labelIcon}
+        />
+      )}
       <Text style={[styles.label, { color: colors.text }]}>
         {label} <Text style={styles.required}>*</Text>
       </Text>
@@ -52,17 +65,29 @@ const RequiredLabel: React.FC<{ label: string; icon?: keyof typeof Ionicons.glyp
   );
 };
 
-const OptionalLabel: React.FC<{ label: string; icon?: keyof typeof Ionicons.glyphMap }> = ({ label, icon }) => {
+const OptionalLabel: React.FC<{
+  label: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+}> = ({ label, icon }) => {
   const { colors } = useTheme();
   return (
     <View style={styles.labelContainer}>
-      {icon && <Ionicons name={icon} size={18} color={colors.subtext} style={styles.labelIcon} />}
+      {icon && (
+        <Ionicons
+          name={icon}
+          size={18}
+          color={colors.subtext}
+          style={styles.labelIcon}
+        />
+      )}
       <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
     </View>
   );
 };
 
-export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation }) => {
+export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({
+  navigation,
+}) => {
   const { colors, theme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -72,19 +97,19 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [imageLoading, setImageLoading] = useState(false);
-  
+
   const [eventData, setEventData] = useState<EventFormData>({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     image_url: null,
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toTimeString().split(' ')[0].slice(0, 5),
-    end_time: '',
-    location: '',
+    date: new Date().toISOString().split("T")[0],
+    time: new Date().toTimeString().split(" ")[0].slice(0, 5),
+    end_time: "",
+    location: "",
     ticket_price: undefined,
     ticket_stock: undefined,
-    ticket_sale_location: '',
-    announcement: ''
+    ticket_sale_location: "",
+    announcement: "",
   });
 
   useEffect(() => {
@@ -94,23 +119,23 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const fetchCategories = async () => {
     try {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name');
+        .from("categories")
+        .select("*")
+        .order("name");
 
       if (error) throw error;
       setCategories(data || []);
     } catch (error) {
-      console.error('Error fetching categories:', error);
-      Alert.alert('Error', 'No se pudieron cargar las categorías');
+      console.error("Error fetching categories:", error);
+      Alert.alert("Error", "No se pudieron cargar las categorías");
     }
   };
 
   const toggleCategory = (category: Category) => {
-    setSelectedCategories(prev => {
-      const isSelected = prev.some(cat => cat.id === category.id);
+    setSelectedCategories((prev) => {
+      const isSelected = prev.some((cat) => cat.id === category.id);
       if (isSelected) {
-        return prev.filter(cat => cat.id !== category.id);
+        return prev.filter((cat) => cat.id !== category.id);
       } else {
         return [...prev, category];
       }
@@ -129,22 +154,22 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
       const filePath = `public/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('events')
+        .from("events")
         .upload(filePath, decode(base64), {
-          contentType: 'image/jpeg',
+          contentType: "image/jpeg",
           upsert: true,
-          cacheControl: '3600'
+          cacheControl: "3600",
         });
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('events')
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("events").getPublicUrl(filePath);
 
       return publicUrl;
     } catch (error) {
-      console.error('Error subiendo imagen:', error);
+      console.error("Error subiendo imagen:", error);
       return null;
     } finally {
       setImageLoading(false);
@@ -153,10 +178,11 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
 
   const handleImagePick = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Error', 'Se necesita permiso para acceder a la galería');
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (status !== "granted") {
+        Alert.alert("Error", "Se necesita permiso para acceder a la galería");
         return;
       }
 
@@ -172,8 +198,8 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
         setPreviewImage(imageUri);
       }
     } catch (error) {
-      console.error('Error al seleccionar imagen:', error);
-      Alert.alert('Error', 'No se pudo seleccionar la imagen');
+      console.error("Error al seleccionar imagen:", error);
+      Alert.alert("Error", "No se pudo seleccionar la imagen");
     }
   };
 
@@ -182,15 +208,15 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     if (selectedDate) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       if (selectedDate < today) {
-        Alert.alert('Error', 'No se puede seleccionar una fecha pasada');
+        Alert.alert("Error", "No se puede seleccionar una fecha pasada");
         return;
       }
-      
-      setEventData(prev => ({
+
+      setEventData((prev) => ({
         ...prev,
-        date: selectedDate.toISOString().split('T')[0]
+        date: selectedDate.toISOString().split("T")[0],
       }));
     }
   };
@@ -198,10 +224,10 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const handleStartTimeChange = (event: any, selectedTime?: Date) => {
     setShowStartTimePicker(false);
     if (selectedTime) {
-      const timeString = selectedTime.toTimeString().split(' ')[0].slice(0, 5);
-      setEventData(prev => ({
+      const timeString = selectedTime.toTimeString().split(" ")[0].slice(0, 5);
+      setEventData((prev) => ({
         ...prev,
-        time: timeString
+        time: timeString,
       }));
     }
   };
@@ -209,45 +235,54 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
   const handleEndTimeChange = (event: any, selectedTime?: Date) => {
     setShowEndTimePicker(false);
     if (selectedTime) {
-      const timeString = selectedTime.toTimeString().split(' ')[0].slice(0, 5);
+      const timeString = selectedTime.toTimeString().split(" ")[0].slice(0, 5);
       if (timeString <= eventData.time) {
-        Alert.alert('Error', 'La hora de finalización debe ser posterior a la hora de inicio');
+        Alert.alert(
+          "Error",
+          "La hora de finalización debe ser posterior a la hora de inicio"
+        );
         return;
       }
-      setEventData(prev => ({
+      setEventData((prev) => ({
         ...prev,
-        end_time: timeString
+        end_time: timeString,
       }));
     }
   };
 
   const validateForm = (): boolean => {
     if (!eventData.title.trim()) {
-      Alert.alert('Error', 'El título es obligatorio');
+      Alert.alert("Error", "El título es obligatorio");
       return false;
     }
     if (!eventData.location.trim()) {
-      Alert.alert('Error', 'La ubicación es obligatoria');
+      Alert.alert("Error", "La ubicación es obligatoria");
       return false;
     }
     if (!previewImage && !eventData.image_url) {
-      Alert.alert('Error', 'La imagen es obligatoria');
+      Alert.alert("Error", "La imagen es obligatoria");
       return false;
     }
     if (selectedCategories.length === 0) {
-      Alert.alert('Error', 'Debes seleccionar al menos una categoría');
+      Alert.alert("Error", "Debes seleccionar al menos una categoría");
       return false;
     }
     if (eventData.ticket_price !== undefined && eventData.ticket_price < 0) {
-      Alert.alert('Error', 'El precio no puede ser negativo');
+      Alert.alert("Error", "El precio no puede ser negativo");
       return false;
     }
     if (eventData.ticket_stock !== undefined && eventData.ticket_stock < 0) {
-      Alert.alert('Error', 'El stock no puede ser negativo');
+      Alert.alert("Error", "El stock no puede ser negativo");
       return false;
     }
-    if (eventData.ticket_price !== undefined && !eventData.ticket_sale_location) {
-      Alert.alert('Error', 'Si el evento es pago, debe especificar el punto de venta');
+    if (
+      eventData.ticket_price !== undefined &&
+      !eventData.ticket_sale_location
+    ) {
+      Alert.alert(
+        "Error",
+        "Si el evento es pago, debe especificar el punto de venta"
+      );
       return false;
     }
     return true;
@@ -259,22 +294,30 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
     try {
       setLoading(true);
 
-      const [{ data: { user }, error: authError }, finalImageUrl] = await Promise.all([
+      const [
+        {
+          data: { user },
+          error: authError,
+        },
+        finalImageUrl,
+      ] = await Promise.all([
         supabase.auth.getUser(),
-        previewImage ? uploadImageToSupabase(previewImage) : Promise.resolve(eventData.image_url)
+        previewImage
+          ? uploadImageToSupabase(previewImage)
+          : Promise.resolve(eventData.image_url),
       ]);
 
       if (authError || !user) {
-        throw new Error('Usuario no autenticado');
+        throw new Error("Usuario no autenticado");
       }
 
       if (previewImage && !finalImageUrl) {
-        throw new Error('Error al subir la imagen');
+        throw new Error("Error al subir la imagen");
       }
 
       // Insertar el evento
       const { data: newEvent, error: insertError } = await supabase
-        .from('events')
+        .from("events")
         .insert({
           title: eventData.title,
           description: eventData.description,
@@ -287,7 +330,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           ticket_stock: eventData.ticket_stock || null,
           ticket_sale_location: eventData.ticket_sale_location || null,
           announcement: eventData.announcement || null,
-          creator_id: user.id
+          creator_id: user.id,
         })
         .select()
         .single();
@@ -295,23 +338,23 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
       if (insertError) throw insertError;
 
       // Insertar las categorías del evento
-      const eventCategories = selectedCategories.map(category => ({
+      const eventCategories = selectedCategories.map((category) => ({
         event_id: newEvent.id,
-        category_id: category.id
+        category_id: category.id,
       }));
 
       const { error: categoriesError } = await supabase
-        .from('event_categories')
+        .from("event_categories")
         .insert(eventCategories);
 
       if (categoriesError) throw categoriesError;
 
-      Alert.alert('¡Éxito!', 'Evento creado correctamente', [
-        { text: 'OK', onPress: () => navigation.goBack() }
+      Alert.alert("¡Éxito!", "Evento creado correctamente", [
+        { text: "OK", onPress: () => navigation.goBack() },
       ]);
     } catch (error: any) {
-      console.error('Error creando evento:', error);
-      Alert.alert('Error', error.message || 'No se pudo crear el evento');
+      console.error("Error creando evento:", error);
+      Alert.alert("Error", error.message || "No se pudo crear el evento");
     } finally {
       setLoading(false);
     }
@@ -319,71 +362,82 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+    return date.toLocaleDateString("es-ES", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
       {/* Header con gradiente */}
       <LinearGradient
-        colors={theme === 'dark' ? ['#2C3E50', '#34495E'] : ['#667eea', '#764ba2']}
+        colors={
+          theme === "dark" ? ["#2C3E50", "#34495E"] : ["#667eea", "#764ba2"]
+        }
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.headerGradient}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity 
-            onPress={() => navigation.goBack()} 
-            style={[styles.headerButton, { backgroundColor: 'rgba(255,255,255,0.2)' }]}
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={[
+              styles.headerButton,
+              { backgroundColor: "rgba(255,255,255,0.2)" },
+            ]}
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
-          
+
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Crear Evento</Text>
             <Text style={styles.headerSubtitle}>Comparte tu experiencia</Text>
           </View>
-          
+
           <View style={styles.headerButton} />
         </View>
       </LinearGradient>
 
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
         style={styles.keyboardAvoidingView}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
       >
-        <ScrollView 
+        <ScrollView
           style={styles.content}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
           {/* Sección de imagen */}
-          <View style={[styles.imageSection, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Imagen del Evento</Text>
-            <TouchableOpacity 
+          <View
+            style={[styles.imageSection, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Imagen del Evento
+            </Text>
+            <TouchableOpacity
               style={[styles.imageContainer, { borderColor: colors.border }]}
               onPress={handleImagePick}
               disabled={imageLoading}
             >
-              {(previewImage || eventData.image_url) ? (
+              {previewImage || eventData.image_url ? (
                 <View style={styles.imageWrapper}>
-                  <Image 
-                    source={{ uri: previewImage || eventData.image_url! }} 
+                  <Image
+                    source={{ uri: previewImage || eventData.image_url! }}
                     style={styles.eventImage}
                   />
                   <LinearGradient
-                    colors={['transparent', 'rgba(0,0,0,0.7)']}
+                    colors={["transparent", "rgba(0,0,0,0.7)"]}
                     style={styles.imageOverlay}
                   >
                     <View style={styles.imageActions}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.changeImageButton}
                         onPress={handleImagePick}
                       >
@@ -400,16 +454,27 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
                   ) : (
                     <>
                       <LinearGradient
-                        colors={['#667eea', '#764ba2']}
+                        colors={["#667eea", "#764ba2"]}
                         style={styles.imagePlaceholderIcon}
                       >
                         <Ionicons name="image-outline" size={40} color="#fff" />
                       </LinearGradient>
-                      <Text style={[styles.imagePlaceholderTitle, { color: colors.text }]}>
+                      <Text
+                        style={[
+                          styles.imagePlaceholderTitle,
+                          { color: colors.text },
+                        ]}
+                      >
                         Agregar Imagen
                       </Text>
-                      <Text style={[styles.imagePlaceholderText, { color: colors.subtext }]}>
-                        Toca para seleccionar una imagen atractiva para tu evento
+                      <Text
+                        style={[
+                          styles.imagePlaceholderText,
+                          { color: colors.subtext },
+                        ]}
+                      >
+                        Toca para seleccionar una imagen atractiva para tu
+                        evento
                       </Text>
                     </>
                   )}
@@ -419,19 +484,28 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           </View>
 
           {/* Información básica */}
-          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Información Básica</Text>
-            
+          <View
+            style={[styles.formSection, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Información Básica
+            </Text>
+
             <View style={styles.inputGroup}>
               <RequiredLabel label="Título del evento" icon="text-outline" />
               <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text
-                }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 value={eventData.title}
-                onChangeText={(text) => setEventData(prev => ({ ...prev, title: text }))}
+                onChangeText={(text) =>
+                  setEventData((prev) => ({ ...prev, title: text }))
+                }
                 placeholder="Ej: Concierto de Rock en el Parque"
                 placeholderTextColor={colors.subtext}
               />
@@ -440,13 +514,18 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
             <View style={styles.inputGroup}>
               <OptionalLabel label="Descripción" icon="document-text-outline" />
               <TextInput
-                style={[styles.textArea, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text
-                }]}
+                style={[
+                  styles.textArea,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 value={eventData.description}
-                onChangeText={(text) => setEventData(prev => ({ ...prev, description: text }))}
+                onChangeText={(text) =>
+                  setEventData((prev) => ({ ...prev, description: text }))
+                }
                 placeholder="Describe tu evento, qué pueden esperar los asistentes..."
                 placeholderTextColor={colors.subtext}
                 multiline
@@ -457,13 +536,18 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
             <View style={styles.inputGroup}>
               <RequiredLabel label="Ubicación" icon="location-outline" />
               <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text
-                }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 value={eventData.location}
-                onChangeText={(text) => setEventData(prev => ({ ...prev, location: text }))}
+                onChangeText={(text) =>
+                  setEventData((prev) => ({ ...prev, location: text }))
+                }
                 placeholder="Ej: Teatro Municipal, Calle Principal 123"
                 placeholderTextColor={colors.subtext}
               />
@@ -471,27 +555,39 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           </View>
 
           {/* Fecha y hora */}
-          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Fecha y Horario</Text>
-            
+          <View
+            style={[styles.formSection, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Fecha y Horario
+            </Text>
+
             <View style={styles.dateTimeRow}>
               <View style={styles.dateTimeItem}>
                 <RequiredLabel label="Fecha" icon="calendar-outline" />
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border
-                  }]}
+                  style={[
+                    styles.dateTimeButton,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                    },
+                  ]}
                   onPress={() => setShowStartDatePicker(true)}
                 >
                   <View style={styles.dateTimeContent}>
                     <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                      {new Date(eventData.date).toLocaleDateString('es-ES', { 
-                        day: '2-digit', 
-                        month: 'short' 
+                      {new Date(eventData.date).toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "short",
                       })}
                     </Text>
-                    <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
+                    <Text
+                      style={[
+                        styles.dateTimeSubText,
+                        { color: colors.subtext },
+                      ]}
+                    >
                       {new Date(eventData.date).getFullYear()}
                     </Text>
                   </View>
@@ -501,17 +597,25 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
               <View style={styles.dateTimeItem}>
                 <RequiredLabel label="Hora inicio" icon="time-outline" />
                 <TouchableOpacity
-                  style={[styles.dateTimeButton, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border
-                  }]}
+                  style={[
+                    styles.dateTimeButton,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                    },
+                  ]}
                   onPress={() => setShowStartTimePicker(true)}
                 >
                   <View style={styles.dateTimeContent}>
                     <Text style={[styles.dateTimeText, { color: colors.text }]}>
                       {eventData.time}
                     </Text>
-                    <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
+                    <Text
+                      style={[
+                        styles.dateTimeSubText,
+                        { color: colors.subtext },
+                      ]}
+                    >
                       Inicio
                     </Text>
                   </View>
@@ -522,18 +626,23 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
             <View style={styles.inputGroup}>
               <OptionalLabel label="Hora de finalización" icon="time-outline" />
               <TouchableOpacity
-                style={[styles.dateTimeButton, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border
-                }]}
+                style={[
+                  styles.dateTimeButton,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                  },
+                ]}
                 onPress={() => setShowEndTimePicker(true)}
               >
                 <View style={styles.dateTimeContent}>
                   <Text style={[styles.dateTimeText, { color: colors.text }]}>
-                    {eventData.end_time || 'Sin hora de fin'}
+                    {eventData.end_time || "Sin hora de fin"}
                   </Text>
-                  <Text style={[styles.dateTimeSubText, { color: colors.subtext }]}>
-                    {eventData.end_time ? 'Finalización' : 'Toca para agregar'}
+                  <Text
+                    style={[styles.dateTimeSubText, { color: colors.subtext }]}
+                  >
+                    {eventData.end_time ? "Finalización" : "Toca para agregar"}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -541,23 +650,33 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           </View>
 
           {/* Entradas y precios */}
-          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Entradas y Precios</Text>
-            
+          <View
+            style={[styles.formSection, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Entradas y Precios
+            </Text>
+
             <View style={styles.priceRow}>
               <View style={styles.priceItem}>
                 <OptionalLabel label="Precio" icon="card-outline" />
                 <TextInput
-                  style={[styles.input, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
-                  value={eventData.ticket_price?.toString() || ''}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={eventData.ticket_price?.toString() || ""}
                   onChangeText={(text) => {
-                    const price = text === '' ? undefined : parseFloat(text);
-                    if (text === '' || (!isNaN(price!) && price! >= 0)) {
-                      setEventData(prev => ({ ...prev, ticket_price: price }));
+                    const price = text === "" ? undefined : parseFloat(text);
+                    if (text === "" || (!isNaN(price!) && price! >= 0)) {
+                      setEventData((prev) => ({
+                        ...prev,
+                        ticket_price: price,
+                      }));
                     }
                   }}
                   placeholder="Gratuito"
@@ -569,16 +688,22 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
               <View style={styles.priceItem}>
                 <OptionalLabel label="Stock" icon="ticket-outline" />
                 <TextInput
-                  style={[styles.input, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
-                  value={eventData.ticket_stock?.toString() || ''}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
+                  value={eventData.ticket_stock?.toString() || ""}
                   onChangeText={(text) => {
-                    const stock = text === '' ? undefined : parseInt(text);
-                    if (text === '' || (!isNaN(stock!) && stock! >= 0)) {
-                      setEventData(prev => ({ ...prev, ticket_stock: stock }));
+                    const stock = text === "" ? undefined : parseInt(text);
+                    if (text === "" || (!isNaN(stock!) && stock! >= 0)) {
+                      setEventData((prev) => ({
+                        ...prev,
+                        ticket_stock: stock,
+                      }));
                     }
                   }}
                   placeholder="Ilimitado"
@@ -590,15 +715,26 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
 
             {eventData.ticket_price && (
               <View style={styles.inputGroup}>
-                <RequiredLabel label="Punto de venta" icon="storefront-outline" />
+                <RequiredLabel
+                  label="Punto de venta"
+                  icon="storefront-outline"
+                />
                 <TextInput
-                  style={[styles.input, { 
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text
-                  }]}
+                  style={[
+                    styles.input,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                   value={eventData.ticket_sale_location}
-                  onChangeText={(text) => setEventData(prev => ({ ...prev, ticket_sale_location: text }))}
+                  onChangeText={(text) =>
+                    setEventData((prev) => ({
+                      ...prev,
+                      ticket_sale_location: text,
+                    }))
+                  }
                   placeholder="Ej: Boletería del teatro, Online en eventbrite.com"
                   placeholderTextColor={colors.subtext}
                 />
@@ -607,19 +743,31 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
           </View>
 
           {/* Información adicional */}
-          <View style={[styles.formSection, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Información Adicional</Text>
-            
+          <View
+            style={[styles.formSection, { backgroundColor: colors.surface }]}
+          >
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              Información Adicional
+            </Text>
+
             <View style={styles.inputGroup}>
-              <OptionalLabel label="Anuncio especial" icon="megaphone-outline" />
+              <OptionalLabel
+                label="Anuncio especial"
+                icon="megaphone-outline"
+              />
               <TextInput
-                style={[styles.input, { 
-                  backgroundColor: colors.background,
-                  borderColor: colors.border,
-                  color: colors.text
-                }]}
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 value={eventData.announcement}
-                onChangeText={(text) => setEventData(prev => ({ ...prev, announcement: text }))}
+                onChangeText={(text) =>
+                  setEventData((prev) => ({ ...prev, announcement: text }))
+                }
                 placeholder="Ej: ¡Últimas entradas disponibles!"
                 placeholderTextColor={colors.subtext}
               />
@@ -646,150 +794,171 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
             />
           )}
 
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
-                mode="time"
-                display="default"
-                onChange={handleEndTimeChange}
-              />
-            )}
-
-            <RequiredLabel label="Ubicación" />
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.location}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, location: text }))}
-              placeholder="Dirección del evento"
-              placeholderTextColor={colors.subtext}
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Precio de entrada</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_price?.toString() || ''}
-              onChangeText={(text) => {
-                const price = text === '' ? undefined : parseFloat(text);
-                if (text === '' || (!isNaN(price!) && price! >= 0)) {
-                  setEventData(prev => ({ ...prev, ticket_price: price }));
-                }
-              }}
-              placeholder="Dejar vacío si es gratuito"
-              placeholderTextColor={colors.subtext}
-              keyboardType="numeric"
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Stock de entradas</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_stock?.toString() || ''}
-              onChangeText={(text) => {
-                const stock = text === '' ? undefined : parseInt(text);
-                if (text === '' || (!isNaN(stock!) && stock! >= 0)) {
-                  setEventData(prev => ({ ...prev, ticket_stock: stock }));
-                }
-              }}
-              placeholder="Dejar vacío si no aplica"
-              placeholderTextColor={colors.subtext}
-              keyboardType="numeric"
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Punto de venta</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.ticket_sale_location}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, ticket_sale_location: text }))}
-              placeholder="Requerido si el evento es pago"
-              placeholderTextColor={colors.subtext}
-            />
-
-            <Text style={[styles.label, { color: colors.subtext }]}>Anuncio especial</Text>
-            <TextInput
-              style={[styles.input, { 
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text
-              }]}
-              value={eventData.announcement}
-              onChangeText={(text) => setEventData(prev => ({ ...prev, announcement: text }))}
-              placeholder="Anuncio opcional"
-              placeholderTextColor={colors.subtext}
-            />
-
-            <RequiredLabel label="Categorías" />
-            <View style={styles.categoriesContainer}>
-              {categories.map(category => (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[
-                    styles.categoryChip,
-                    selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChip,
-                    { borderColor: colors.primary }
-                  ]}
-                  onPress={() => toggleCategory(category)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      selectedCategories.some(cat => cat.id === category.id) && styles.selectedCategoryChipText,
-                      { color: selectedCategories.some(cat => cat.id === category.id) ? '#fff' : colors.text }
-                    ]}
-                  >
-                    {category.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[
-              styles.submitButton,
-              loading && styles.submitButtonDisabled,
-              { backgroundColor: colors.primary }
-            ]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
           {showEndTimePicker && (
             <DateTimePicker
-              value={new Date(`${eventData.date}T${eventData.end_time || eventData.time}`)}
+              value={
+                new Date(
+                  `${eventData.date}T${eventData.end_time || eventData.time}`
+                )
+              }
               mode="time"
               display="default"
               onChange={handleEndTimeChange}
             />
           )}
+
+          <RequiredLabel label="Ubicación" />
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={eventData.location}
+            onChangeText={(text) =>
+              setEventData((prev) => ({ ...prev, location: text }))
+            }
+            placeholder="Dirección del evento"
+            placeholderTextColor={colors.subtext}
+          />
+
+          <Text style={[styles.label, { color: colors.subtext }]}>
+            Precio de entrada
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={eventData.ticket_price?.toString() || ""}
+            onChangeText={(text) => {
+              const price = text === "" ? undefined : parseFloat(text);
+              if (text === "" || (!isNaN(price!) && price! >= 0)) {
+                setEventData((prev) => ({ ...prev, ticket_price: price }));
+              }
+            }}
+            placeholder="Dejar vacío si es gratuito"
+            placeholderTextColor={colors.subtext}
+            keyboardType="numeric"
+          />
+
+          <Text style={[styles.label, { color: colors.subtext }]}>
+            Stock de entradas
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={eventData.ticket_stock?.toString() || ""}
+            onChangeText={(text) => {
+              const stock = text === "" ? undefined : parseInt(text);
+              if (text === "" || (!isNaN(stock!) && stock! >= 0)) {
+                setEventData((prev) => ({ ...prev, ticket_stock: stock }));
+              }
+            }}
+            placeholder="Dejar vacío si no aplica"
+            placeholderTextColor={colors.subtext}
+            keyboardType="numeric"
+          />
+
+          <Text style={[styles.label, { color: colors.subtext }]}>
+            Punto de venta
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={eventData.ticket_sale_location}
+            onChangeText={(text) =>
+              setEventData((prev) => ({ ...prev, ticket_sale_location: text }))
+            }
+            placeholder="Requerido si el evento es pago"
+            placeholderTextColor={colors.subtext}
+          />
+
+          <Text style={[styles.label, { color: colors.subtext }]}>
+            Anuncio especial
+          </Text>
+          <TextInput
+            style={[
+              styles.input,
+              {
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                color: colors.text,
+              },
+            ]}
+            value={eventData.announcement}
+            onChangeText={(text) =>
+              setEventData((prev) => ({ ...prev, announcement: text }))
+            }
+            placeholder="Anuncio opcional"
+            placeholderTextColor={colors.subtext}
+          />
+
+          <RequiredLabel label="Categorías" />
+          <View style={styles.categoriesContainer}>
+            {categories.map((category) => (
+              <TouchableOpacity
+                key={category.id}
+                style={[
+                  styles.categoryChip,
+                  selectedCategories.some((cat) => cat.id === category.id) &&
+                    styles.selectedCategoryChip,
+                  { borderColor: colors.primary },
+                ]}
+                onPress={() => toggleCategory(category)}
+              >
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    selectedCategories.some((cat) => cat.id === category.id) &&
+                      styles.selectedCategoryChipText,
+                    {
+                      color: selectedCategories.some(
+                        (cat) => cat.id === category.id
+                      )
+                        ? "#fff"
+                        : colors.text,
+                    },
+                  ]}
+                >
+                  {category.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Botón de crear evento flotante */}
-      <View style={[styles.bottomContainer, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity 
-          style={[
-            styles.submitButton,
-            loading && styles.submitButtonDisabled
-          ]}
+      <View
+        style={[styles.bottomContainer, { backgroundColor: colors.surface }]}
+      >
+        <TouchableOpacity
+          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
           onPress={handleSubmit}
           disabled={loading}
         >
           <LinearGradient
-            colors={loading ? ['#ccc', '#999'] : ['#667eea', '#764ba2']}
+            colors={loading ? ["#ccc", "#999"] : ["#667eea", "#764ba2"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.submitButtonGradient}
@@ -800,7 +969,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({ navigation
               <Ionicons name="add-circle" size={24} color="#fff" />
             )}
             <Text style={styles.submitButtonText}>
-              {loading ? 'Creando evento...' : 'Crear Evento'}
+              {loading ? "Creando evento..." : "Crear Evento"}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -819,28 +988,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitleContainer: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontWeight: "bold",
+    color: "#fff",
   },
   headerSubtitle: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     marginTop: 2,
   },
   keyboardAvoidingView: {
@@ -850,11 +1019,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    flexGrow: 1,
+    paddingBottom: Platform.OS === "ios" ? 90 : 70,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 16,
   },
   imageSection: {
@@ -862,7 +1032,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -871,61 +1041,61 @@ const styles = StyleSheet.create({
     aspectRatio: 16 / 9,
     borderRadius: 12,
     borderWidth: 2,
-    borderStyle: 'dashed',
-    overflow: 'hidden',
+    borderStyle: "dashed",
+    overflow: "hidden",
   },
   imageWrapper: {
     flex: 1,
-    position: 'relative',
+    position: "relative",
   },
   eventImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   imageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
+    justifyContent: "flex-end",
   },
   imageActions: {
     padding: 16,
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   changeImageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.6)",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
   },
   changeImageText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   imagePlaceholder: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     padding: 20,
   },
   imagePlaceholderIcon: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   imagePlaceholderTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
   },
   imagePlaceholderText: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
   formSection: {
@@ -934,7 +1104,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     elevation: 4,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -943,8 +1113,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
   },
   labelIcon: {
@@ -952,11 +1122,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   required: {
-    color: '#FF6B6B',
-    fontWeight: 'bold',
+    color: "#FF6B6B",
+    fontWeight: "bold",
   },
   input: {
     borderWidth: 1,
@@ -970,10 +1140,10 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     minHeight: 100,
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
   },
   dateTimeRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 20,
   },
@@ -986,18 +1156,18 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   dateTimeContent: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   dateTimeText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dateTimeSubText: {
     fontSize: 12,
     marginTop: 2,
   },
   priceRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 12,
     marginBottom: 20,
   },
@@ -1005,23 +1175,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bottomContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     padding: 20,
     paddingBottom: 40,
     elevation: 12,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
   },
   submitButton: {
     borderRadius: 25,
-    overflow: 'hidden',
+    overflow: "hidden",
     elevation: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1030,28 +1200,21 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   submitButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 18,
     paddingHorizontal: 24,
     gap: 12,
   },
   submitButtonText: {
-    color: '#ffffff',
+    color: "#ffffff",
     fontSize: 18,
-    fontWeight: 'bold',
-  },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: Platform.OS === 'ios' ? 90 : 70
+    fontWeight: "bold",
   },
   categoriesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     marginBottom: 16,
     gap: 8,
   },
@@ -1064,14 +1227,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   selectedCategoryChip: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF',
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   categoryChipText: {
     fontSize: 14,
   },
   selectedCategoryChipText: {
-    color: '#fff',
+    color: "#fff",
   },
-}); 
 });
