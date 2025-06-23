@@ -5,6 +5,7 @@ import { AuthScreen } from './app/screens/AuthScreen';
 import { CreateEventScreen } from './app/screens/CreateEventScreen';
 import { EditProfileScreen } from './app/screens/EditProfileScreen';
 import { EventDetailScreen } from './app/screens/EventDetailScreen';
+import { EventInfoScreen } from './app/screens/EventInfoScreen';
 import FavoritesScreen from './app/screens/FavoritesScreen';
 import { HomeScreen } from './app/screens/HomeScreen';
 import MyEventsScreen from './app/screens/MyEventsScreen';
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   MyEvents: undefined;
   Favorites:undefined;
   EventDetail: { event: Event };
+  EventInfo: { event: Event };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -76,6 +78,13 @@ function AppNavigator() {
           <Stack.Screen
             name="EventDetail"
             component={EventDetailScreen}
+            options={{
+              headerShown: false
+            }}
+          />
+          <Stack.Screen
+            name="EventInfo"
+            component={EventInfoScreen}
             options={{
               headerShown: false
             }}

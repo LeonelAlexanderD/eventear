@@ -20,6 +20,7 @@ export type Event = {
   announcement?: string;
   created_at: string;
   updated_at: string;
+  status?: 'published' | 'cancelled' | 'finished';
   categories?: Category[];
 };
 

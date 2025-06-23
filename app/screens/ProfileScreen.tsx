@@ -16,6 +16,7 @@ import {
   View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { MenuBadges, menuBadgesServices, UserStats, userStatsServices } from '../../lib/services';
 import { supabase } from '../../lib/supabase';
 
 const { width } = Dimensions.get('window');
@@ -27,7 +28,6 @@ type RootStackParamList = {
   CreateEvent: undefined;
   MyEvents: undefined;
   Favorites: undefined;
-  Notifications: undefined;
   Settings: undefined;
 };
 
@@ -57,10 +57,13 @@ type UserProfile = {
 export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userStats, setUserStats] = useState<UserStats>({ eventsCount: 0, followersCount: 0, followingCount: 0 });
+  const [menuBadges, setMenuBadges] = useState<MenuBadges>({ myEvents: 0, favorites: 0 });
   const { theme, colors, toggleTheme } = useTheme();
 
   useEffect(() => {
     loadProfile();
+    loadStats();
   }, []);
 
   const loadProfile = async () => {
@@ -86,6 +89,19 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       navigation.goBack();
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const [stats, badges] = await Promise.all([
+        userStatsServices.getUserStats(),
+        menuBadgesServices.getMenuBadges()
+      ]);
+      setUserStats(stats);
+      setMenuBadges(badges);
+    } catch (error) {
+      console.error('Error cargando estadísticas:', error);
     }
   };
 
@@ -125,9 +141,6 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
       case 'Favoritos':
         navigation.navigate('Favorites');
         break;
-      case 'Notificaciones':
-        navigation.navigate('Notifications');
-        break;
       case 'Crear Evento':
         navigation.navigate('CreateEvent');
         break;
@@ -141,10 +154,18 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
   };
 
   const menuItems: MenuItem[] = [
-    { icon: 'calendar-outline', title: 'Mis Eventos', color: '#FF6B6B', badge: 2 },
-    { icon: 'heart-outline', title: 'Favoritos', color: '#FF8E72', badge: 5 },
-    { icon: 'notifications-outline', title: 'Notificaciones', color: '#4ECDC4', badge: 3 },
-    { icon: 'add-circle-outline', title: 'Crear Evento', color: '#45B7D1' },
+    { 
+      icon: 'calendar-outline', 
+      title: 'Mis Eventos', 
+      color: '#FF6B6B', 
+      badge: menuBadges.myEvents && menuBadges.myEvents > 0 ? menuBadges.myEvents : undefined 
+    },
+    { 
+      icon: 'heart-outline', 
+      title: 'Favoritos', 
+      color: '#FF8E72', 
+      badge: menuBadges.favorites && menuBadges.favorites > 0 ? menuBadges.favorites : undefined 
+    },
     { icon: 'settings-outline', title: 'Preferencias', color: '#96CEB4' },
     { icon: theme === 'dark' ? 'sunny-outline' : 'moon-outline', title: 'Modo Oscuro', color: '#FFCC5C' },
   ];
@@ -239,17 +260,23 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
           {/* Estadísticas */}
           <View style={styles.statsContainer}>
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>12</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>
+                {userStats.eventsCount || 0}
+              </Text>
               <Text style={[styles.statLabel, { color: colors.subtext }]}>Eventos</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>48</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>
+                {userStats.followersCount || 0}
+              </Text>
               <Text style={[styles.statLabel, { color: colors.subtext }]}>Seguidores</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statItem}>
-              <Text style={[styles.statNumber, { color: colors.primary }]}>156</Text>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>
+                {userStats.followingCount || 0}
+              </Text>
               <Text style={[styles.statLabel, { color: colors.subtext }]}>Siguiendo</Text>
             </View>
           </View>
@@ -325,7 +352,7 @@ export const ProfileScreen: React.FC<ProfileScreenProps> = ({ navigation }) => {
                 </View>
                 
                 <View style={styles.menuItemRight}>
-                  {item.badge && (
+                  {item.badge && item.badge > 0 && (
                     <View style={[styles.badgeContainer, { backgroundColor: item.color }]}>
                       <Text style={styles.badgeText}>{item.badge}</Text>
                     </View>

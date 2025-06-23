@@ -4,22 +4,22 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
-  Image,
-  SafeAreaView,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    Dimensions,
+    Image,
+    SafeAreaView,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { RootStackParamList } from '../../App';
 import { useTheme } from '../../contexts/ThemeContext';
+import { creatorServices } from '../../lib/services';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,13 +28,19 @@ type EventDetailScreenProps = {
   route: RouteProp<RootStackParamList, 'EventDetail'>;
 };
 
+type CreatorInfo = {
+  username: string;
+  email: string;
+};
+
 export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation, route }) => {
   const { colors, theme } = useTheme();
   const { event } = route.params;
   const [isFavorite, setIsFavorite] = useState(false);
-  const [isInterested, setIsInterested] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  const [creatorInfo, setCreatorInfo] = useState<CreatorInfo | null>(null);
+  const [loadingCreator, setLoadingCreator] = useState(true);
 
   // Imágenes hardcodeadas mejoradas
   const eventImages = [
@@ -44,6 +50,22 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
     'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=1200&h=800&fit=crop', // Deportes
     'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=1200&h=800&fit=crop', // Arte
   ];
+
+  useEffect(() => {
+    loadCreatorInfo();
+  }, []);
+
+  const loadCreatorInfo = async () => {
+    try {
+      setLoadingCreator(true);
+      const creator = await creatorServices.getEventCreator(event.creator_id);
+      setCreatorInfo(creator);
+    } catch (error) {
+      console.error('Error cargando información del creador:', error);
+    } finally {
+      setLoadingCreator(false);
+    }
+  };
 
   const getEventImage = () => {
     const index = event.id ? parseInt(event.id.toString()) % eventImages.length : 0;
@@ -94,25 +116,32 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
     // Aquí implementarías la lógica para guardar en favoritos
   };
 
-  const handleInterested = () => {
-    setIsInterested(!isInterested);
-    Alert.alert(
-      isInterested ? 'Ya no estás interesado' : '¡Genial!',
-      isInterested 
-        ? 'Has sido removido de la lista de interesados' 
-        : 'Te hemos agregado a la lista de interesados. Te notificaremos sobre actualizaciones.'
-    );
+  const isEventFree = () => {
+    return event.ticket_price === null || event.ticket_price === 0 || event.ticket_price === undefined;
   };
 
-  const handleBuyTickets = () => {
-    Alert.alert(
-      'Comprar Entradas',
-      '¿Deseas proceder con la compra de entradas?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Continuar', onPress: () => console.log('Redirect to payment') }
-      ]
-    );
+  const getEventStatus = () => {
+    if (event.status) {
+      switch (event.status) {
+        case 'cancelled': return { text: 'EVENTO CANCELADO', color: '#E74C3C' };
+        case 'finished': return { text: 'EVENTO FINALIZADO', color: '#95A5A6' };
+        case 'published': 
+          if (event.ticket_stock === 0) return { text: 'AGOTADO', color: '#E74C3C' };
+          return { text: 'PUBLICADO', color: '#27AE60' };
+        default: return { text: 'BORRADOR', color: '#F39C12' };
+      }
+    }
+    
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    
+    if (eventDate < today) return { text: 'FINALIZADO', color: '#95A5A6' };
+    if (event.ticket_stock === 0) return { text: 'AGOTADO', color: '#E74C3C' };
+    return { text: 'ACTIVO', color: '#27AE60' };
+  };
+
+  const isEventCancelled = () => {
+    return event.status === 'cancelled';
   };
 
   return (
@@ -172,6 +201,19 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
                 <Text style={styles.categoryText}>{getEventCategory()}</Text>
               </View>
 
+              {/* Badge de evento gratuito */}
+              {isEventFree() && (
+                <View style={styles.freeEventBadge}>
+                  <LinearGradient
+                    colors={['#4CAF50', '#45a049']}
+                    style={styles.freeEventGradient}
+                  >
+                    <Ionicons name="gift" size={20} color="#fff" />
+                    <Text style={styles.freeEventText}>EVENTO GRATUITO</Text>
+                  </LinearGradient>
+                </View>
+              )}
+
               {imageLoading && (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="large" color="#fff" />
@@ -188,6 +230,19 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
             </LinearGradient>
           )}
         </View>
+
+        {/* Banner de evento cancelado */}
+        {isEventCancelled() && (
+          <View style={styles.cancelledBanner}>
+            <LinearGradient
+              colors={['#E74C3C', '#C0392B']}
+              style={styles.cancelledGradient}
+            >
+              <Ionicons name="close-circle" size={24} color="#fff" />
+              <Text style={styles.cancelledText}>EVENTO CANCELADO</Text>
+            </LinearGradient>
+          </View>
+        )}
 
         {/* Información principal */}
         <View style={[styles.mainInfo, { backgroundColor: colors.surface }]}>
@@ -250,7 +305,7 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
           </View>
 
           {/* Precio */}
-          {event.ticket_price !== null && (
+          {!isEventFree() && event.ticket_price !== null && (
             <View style={styles.infoCard}>
               <View style={[styles.infoIconContainer, { backgroundColor: getCategoryColor() + '20' }]}>
                 <Ionicons name="ticket" size={24} color={getCategoryColor()} />
@@ -269,6 +324,25 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
             </View>
           )}
         </View>
+
+        {/* Categorías */}
+        {event.categories && event.categories.length > 0 && (
+          <View style={[styles.section, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Categorías</Text>
+            <View style={styles.categoriesContainer}>
+              {event.categories.map((category, index) => (
+                <View 
+                  key={category.id} 
+                  style={[styles.categoryChip, { backgroundColor: getCategoryColor() + '20' }]}
+                >
+                  <Text style={[styles.categoryChipText, { color: getCategoryColor() }]}>
+                    {category.name}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Descripción */}
         {event.description && (
@@ -305,14 +379,27 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
           <Text style={[styles.sectionTitle, { color: colors.text }]}>Organizador</Text>
           <View style={styles.organizerCard}>
             <View style={[styles.organizerAvatar, { backgroundColor: getCategoryColor() }]}>
-              {/* <Text style={styles.organizerInitial}>
-                {event.organizer ? event.organizer.charAt(0).toUpperCase() : 'E'}
-              </Text> */}
+              <Text style={styles.organizerInitial}>
+                {creatorInfo?.username ? creatorInfo.username.charAt(0).toUpperCase() : 'U'}
+              </Text>
             </View>
             <View style={styles.organizerInfo}>
-              {/* <Text style={[styles.organizerName, { color: colors.text }]}>
-                {event.organizer || 'Evente-Ar'}
-              </Text> */}
+              {loadingCreator ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : creatorInfo ? (
+                <>
+                  <Text style={[styles.organizerName, { color: colors.text }]}>
+                    {creatorInfo.username}
+                  </Text>
+                  <Text style={[styles.organizerEmail, { color: colors.subtext }]}>
+                    {creatorInfo.email}
+                  </Text>
+                </>
+              ) : (
+                <Text style={[styles.organizerName, { color: colors.text }]}>
+                  Usuario
+                </Text>
+              )}
               <Text style={[styles.organizerRole, { color: colors.subtext }]}>
                 Organizador del evento
               </Text>
@@ -326,42 +413,6 @@ export const EventDetailScreen: React.FC<EventDetailScreenProps> = ({ navigation
         {/* Espacio para botones flotantes */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Botones de acción flotantes */}
-      <View style={[styles.actionButtons, { backgroundColor: colors.surface }]}>
-        <TouchableOpacity 
-          onPress={handleInterested}
-          style={[
-            styles.secondaryButton, 
-            { 
-              backgroundColor: isInterested ? getCategoryColor() + '20' : colors.border,
-              borderColor: getCategoryColor()
-            }
-          ]}
-        >
-          <Ionicons 
-            name={isInterested ? "checkmark" : "add"} 
-            size={20} 
-            color={isInterested ? getCategoryColor() : colors.subtext} 
-          />
-          <Text style={[
-            styles.secondaryButtonText, 
-            { color: isInterested ? getCategoryColor() : colors.subtext }
-          ]}>
-            {isInterested ? 'Interesado' : 'Me interesa'}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          onPress={handleBuyTickets}
-          style={[styles.primaryButton, { backgroundColor: getCategoryColor() }]}
-        >
-          <Ionicons name="ticket" size={20} color="#fff" />
-          <Text style={styles.primaryButtonText}>
-            {event.ticket_price ? `Comprar - $${event.ticket_price}` : 'Obtener Entrada'}
-          </Text>
-        </TouchableOpacity>
-      </View>
     </SafeAreaView>
   );
 };
@@ -437,6 +488,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#fff',
     fontWeight: '500',
+  },
+  cancelledBanner: {
+    marginHorizontal: 16,
+    marginTop: -15,
+    marginBottom: 15,
+    zIndex: 5,
+  },
+  cancelledGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    gap: 8,
+    elevation: 8,
+    shadowColor: '#E74C3C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  cancelledText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
   },
   mainInfo: {
     padding: 24,
@@ -603,6 +680,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  organizerEmail: {
+    fontSize: 14,
+    marginTop: 2,
+  },
   organizerRole: {
     fontSize: 14,
     marginTop: 2,
@@ -617,52 +698,43 @@ const styles = StyleSheet.create({
   bottomSpacer: {
     height: 100,
   },
-  actionButtons: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+  categoriesContainer: {
     flexDirection: 'row',
-    padding: 20,
-    paddingBottom: 40,
-    gap: 12,
-    elevation: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-  },
-  secondaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 25,
-    borderWidth: 1,
+    flexWrap: 'wrap',
     gap: 8,
   },
-  secondaryButtonText: {
-    fontSize: 16,
+  categoryChip: {
+    padding: 8,
+    borderRadius: 16,
+    backgroundColor: '#fff',
+  },
+  categoryChipText: {
+    fontSize: 14,
     fontWeight: '600',
   },
-  primaryButton: {
-    flex: 2,
+  freeEventBadge: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    zIndex: 5,
+  },
+  freeEventGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 25,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
-  primaryButtonText: {
+  freeEventText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: 'bold',
+    marginLeft: 6,
+    textTransform: 'uppercase',
   },
-});
+}); 

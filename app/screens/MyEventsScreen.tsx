@@ -2,19 +2,21 @@ import { RootStackParamList } from '@/App';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Dimensions,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { eventServices } from '../../lib/services';
 import { Event } from '../../types/event';
 
 const { width } = Dimensions.get('window');
@@ -27,67 +29,25 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
   const { colors, theme } = useTheme();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Datos hardcodeados de eventos del usuario
-  const allEvents: Event[] = [
-    {
-      id: '1',
-      creator_id: 'user123',
-      title: 'Festival de Rock 2024',
-      description: 'Un increíble festival con las mejores bandas locales de rock y metal',
-      image_url: 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&h=600&fit=crop',
-      date: '2024-12-15',
-      time: '18:00',
-      location: 'Estadio Central',
-      ticket_price: 1500,
-      ticket_stock: 500,
-      announcement: '¡Últimas entradas disponibles!',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      creator_id: 'user123',
-      title: 'Exposición de Arte Moderno',
-      description: 'Exhibición de obras de artistas contemporáneos emergentes',
-      image_url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
-      date: '2024-12-20',
-      time: '10:00',
-      location: 'Galería Municipal',
-      ticket_price: 500,
-      ticket_stock: 100,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      creator_id: 'user123',
-      title: 'Torneo de Fútbol 5',
-      description: 'Competencia amistosa entre equipos locales del barrio',
-      image_url: 'https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&h=600&fit=crop',
-      date: '2024-11-25',
-      time: '15:00',
-      location: 'Complejo Deportivo Norte',
-      ticket_price: 200,
-      ticket_stock: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '4',
-      creator_id: 'user123',
-      title: 'Noche de Jazz',
-      description: 'Una velada íntima con los mejores músicos de jazz de la ciudad',
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop',
-      date: '2024-11-10',
-      time: '20:00',
-      location: 'Club de Jazz Downtown',
-      ticket_price: 800,
-      ticket_stock: 50,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+  useEffect(() => {
+    loadEvents();
+  }, []);
+
+  const loadEvents = async () => {
+    try {
+      setLoading(true);
+      const events = await eventServices.getUserEvents();
+      setAllEvents(events);
+    } catch (error) {
+      console.error('Error cargando eventos:', error);
+      Alert.alert('Error', 'No se pudieron cargar los eventos');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getFilteredEvents = () => {
     const today = new Date();
@@ -109,14 +69,12 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simular carga de datos
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await loadEvents();
+    setRefreshing(false);
   };
 
   const handleEventPress = (event: Event) => {
-    navigation.navigate('EventDetail', { event });
+    navigation.navigate('EventInfo', { event });
   };
 
   const handleCreateEvent = () => {
@@ -150,6 +108,20 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
   };
 
   const getEventStatus = (event: Event) => {
+    // Si el evento tiene un status definido en la base de datos, usarlo
+    if (event.status) {
+      switch (event.status) {
+        case 'cancelled': return 'cancelled';
+        case 'finished': return 'past';
+        case 'published': 
+          // Para eventos publicados, verificar si están agotados o activos
+          if (event.ticket_stock === 0) return 'sold_out';
+          return 'active';
+        default: return 'active';
+      }
+    }
+    
+    // Fallback al cálculo manual si no hay status
     const eventDate = new Date(event.date);
     const today = new Date();
     
@@ -161,6 +133,7 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'past': return '#95A5A6';
+      case 'cancelled': return '#E74C3C';
       case 'sold_out': return '#E74C3C';
       case 'active': return '#27AE60';
       default: return colors.primary;
@@ -170,6 +143,7 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'past': return 'Finalizado';
+      case 'cancelled': return 'Cancelado';
       case 'sold_out': return 'Agotado';
       case 'active': return 'Activo';
       default: return 'Activo';
@@ -196,7 +170,7 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Mis Eventos</Text>
             <Text style={styles.headerSubtitle}>
-              {allEvents.length} eventos creados
+              {loading ? 'Cargando...' : `${allEvents.length} eventos creados`}
             </Text>
           </View>
           
@@ -209,201 +183,208 @@ const MyEventsScreen = ({ navigation }: MyEventsScreenProps) => {
         </View>
       </LinearGradient>
 
-      <ScrollView 
-        style={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={[colors.primary]}
-            tintColor={colors.primary}
-          />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Estadísticas */}
-        <View style={[styles.statsContainer, { backgroundColor: colors.surface }]}>
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: '#27AE60' }]}>{upcomingCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.subtext }]}>Próximos</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: '#95A5A6' }]}>{pastCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.subtext }]}>Finalizados</Text>
-          </View>
-          <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
-          <View style={styles.statItem}>
-            <Text style={[styles.statNumber, { color: colors.primary }]}>
-              {allEvents.reduce((sum, event) => sum + (event.ticket_stock || 0), 0)}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.subtext }]}>Entradas</Text>
-          </View>
+      {loading ? (
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Cargando eventos...</Text>
         </View>
+      ) : (
+        <ScrollView 
+          style={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[colors.primary]}
+              tintColor={colors.primary}
+            />
+          }
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Estadísticas */}
+          <View style={[styles.statsContainer, { backgroundColor: colors.surface }]}>
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: '#27AE60' }]}>{upcomingCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Próximos</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: '#95A5A6' }]}>{pastCount}</Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Finalizados</Text>
+            </View>
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statNumber, { color: colors.primary }]}>
+                {allEvents.reduce((sum, event) => sum + (event.ticket_stock || 0), 0) || 0}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.subtext }]}>Entradas</Text>
+            </View>
+          </View>
 
-        {/* Filtros */}
-        <View style={[styles.filtersContainer, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.filtersTitle, { color: colors.text }]}>Filtrar por:</Text>
-          <View style={styles.filtersRow}>
-            {[
-              { key: 'all', label: 'Todos', count: allEvents.length },
-              { key: 'upcoming', label: 'Próximos', count: upcomingCount },
-              { key: 'past', label: 'Finalizados', count: pastCount }
-            ].map((filter) => (
-              <TouchableOpacity
-                key={filter.key}
-                style={[
-                  styles.filterButton,
-                  {
-                    backgroundColor: selectedFilter === filter.key 
-                      ? colors.primary 
-                      : colors.background,
-                    borderColor: colors.border
-                  }
-                ]}
-                onPress={() => setSelectedFilter(filter.key as any)}
-              >
-                <Text style={[
-                  styles.filterButtonText,
-                  {
-                    color: selectedFilter === filter.key 
-                      ? '#fff' 
-                      : colors.text
-                  }
-                ]}>
-                  {filter.label}
-                </Text>
-                <View style={[
-                  styles.filterBadge,
-                  {
-                    backgroundColor: selectedFilter === filter.key 
-                      ? 'rgba(255,255,255,0.3)' 
-                      : colors.primary
-                  }
-                ]}>
+          {/* Filtros */}
+          <View style={[styles.filtersContainer, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.filtersTitle, { color: colors.text }]}>Filtrar por:</Text>
+            <View style={styles.filtersRow}>
+              {[
+                { key: 'all', label: 'Todos', count: allEvents.length },
+                { key: 'upcoming', label: 'Próximos', count: upcomingCount },
+                { key: 'past', label: 'Finalizados', count: pastCount }
+              ].map((filter) => (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={[
+                    styles.filterButton,
+                    {
+                      backgroundColor: selectedFilter === filter.key 
+                        ? colors.primary 
+                        : colors.background,
+                      borderColor: colors.border
+                    }
+                  ]}
+                  onPress={() => setSelectedFilter(filter.key as any)}
+                >
                   <Text style={[
-                    styles.filterBadgeText,
+                    styles.filterButtonText,
                     {
                       color: selectedFilter === filter.key 
                         ? '#fff' 
-                        : '#fff'
+                        : colors.text
                     }
                   ]}>
-                    {filter.count}
+                    {filter.label}
                   </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Lista de eventos mejorada */}
-        {filteredEvents.length > 0 ? (
-          <View style={[styles.eventsContainer, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {selectedFilter === 'all' && 'Todos los Eventos'}
-              {selectedFilter === 'upcoming' && 'Eventos Próximos'}
-              {selectedFilter === 'past' && 'Eventos Finalizados'}
-            </Text>
-            
-            {filteredEvents.map((event, index) => {
-              const status = getEventStatus(event);
-              return (
-                <TouchableOpacity
-                  key={event.id}
-                  style={[styles.eventCard, { backgroundColor: colors.background }]}
-                  onPress={() => handleEventPress(event)}
-                >
-                  <View style={styles.eventCardContent}>
-                    <View style={styles.eventInfo}>
-                      <View style={styles.eventHeader}>
-                        <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>
-                          {event.title}
-                        </Text>
-                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
-                          <Text style={styles.statusText}>{getStatusText(status)}</Text>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.eventDetails}>
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="calendar-outline" size={16} color={colors.primary} />
-                          <Text style={[styles.eventDetailText, { color: colors.subtext }]}>
-                            {new Date(event.date).toLocaleDateString('es-ES', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            })} • {event.time}
-                          </Text>
-                        </View>
-                        
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="location-outline" size={16} color={colors.primary} />
-                          <Text style={[styles.eventDetailText, { color: colors.subtext }]} numberOfLines={1}>
-                            {event.location}
-                          </Text>
-                        </View>
-                        
-                        <View style={styles.eventDetailRow}>
-                          <Ionicons name="ticket-outline" size={16} color={colors.primary} />
-                          <Text style={[styles.eventDetailText, { color: colors.subtext }]}>
-                            ${event.ticket_price} • {event.ticket_stock || 0} disponibles
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.eventActions}>
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
-                        onPress={() => handleEditEvent(event)}
-                      >
-                        <Ionicons name="create-outline" size={20} color={colors.primary} />
-                      </TouchableOpacity>
-                      
-                      <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: '#E74C3C20' }]}
-                        onPress={() => handleDeleteEvent(event)}
-                      >
-                        <Ionicons name="trash-outline" size={20} color="#E74C3C" />
-                      </TouchableOpacity>
-                    </View>
+                  <View style={[
+                    styles.filterBadge,
+                    {
+                      backgroundColor: selectedFilter === filter.key 
+                        ? 'rgba(255,255,255,0.3)' 
+                        : colors.primary
+                    }
+                  ]}>
+                    <Text style={[
+                      styles.filterBadgeText,
+                      {
+                        color: selectedFilter === filter.key 
+                          ? '#fff' 
+                          : '#fff'
+                      }
+                    ]}>
+                      {filter.count}
+                    </Text>
                   </View>
                 </TouchableOpacity>
-              );
-            })}
+              ))}
+            </View>
           </View>
-        ) : (
-          <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
-            <LinearGradient
-              colors={['#667eea', '#764ba2']}
-              style={styles.emptyIcon}
-            >
-              <Ionicons name="calendar-outline" size={40} color="#fff" />
-            </LinearGradient>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              {selectedFilter === 'all' && 'No tienes eventos creados'}
-              {selectedFilter === 'upcoming' && 'No tienes eventos próximos'}
-              {selectedFilter === 'past' && 'No tienes eventos finalizados'}
-            </Text>
-            <Text style={[styles.emptySubtitle, { color: colors.subtext }]}>
-              {selectedFilter === 'all' 
-                ? 'Crea tu primer evento y comienza a organizar experiencias increíbles'
-                : 'Cambia el filtro para ver otros eventos'
-              }
-            </Text>
-            {selectedFilter === 'all' && (
-              <TouchableOpacity
-                style={[styles.createButton, { backgroundColor: colors.primary }]}
-                onPress={handleCreateEvent}
+
+          {/* Lista de eventos mejorada */}
+          {filteredEvents.length > 0 ? (
+            <View style={[styles.eventsContainer, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {selectedFilter === 'all' && 'Todos los Eventos'}
+                {selectedFilter === 'upcoming' && 'Eventos Próximos'}
+                {selectedFilter === 'past' && 'Eventos Finalizados'}
+              </Text>
+              
+              {filteredEvents.map((event, index) => {
+                const status = getEventStatus(event);
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={[styles.eventCard, { backgroundColor: colors.background }]}
+                    onPress={() => handleEventPress(event)}
+                  >
+                    <View style={styles.eventCardContent}>
+                      <View style={styles.eventInfo}>
+                        <View style={styles.eventHeader}>
+                          <Text style={[styles.eventTitle, { color: colors.text }]} numberOfLines={1}>
+                            {event.title}
+                          </Text>
+                          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
+                            <Text style={styles.statusText}>{getStatusText(status)}</Text>
+                          </View>
+                        </View>
+                        
+                        <View style={styles.eventDetails}>
+                          <View style={styles.eventDetailRow}>
+                            <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                            <Text style={[styles.eventDetailText, { color: colors.subtext }]}>
+                              {new Date(event.date).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              })} • {event.time}
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.eventDetailRow}>
+                            <Ionicons name="location-outline" size={16} color={colors.primary} />
+                            <Text style={[styles.eventDetailText, { color: colors.subtext }]} numberOfLines={1}>
+                              {event.location}
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.eventDetailRow}>
+                            <Ionicons name="ticket-outline" size={16} color={colors.primary} />
+                            <Text style={[styles.eventDetailText, { color: colors.subtext }]}>
+                              ${event.ticket_price} • {event.ticket_stock || 0} disponibles
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.eventActions}>
+                        <TouchableOpacity
+                          style={[styles.actionButton, { backgroundColor: colors.primary + '20' }]}
+                          onPress={() => handleEditEvent(event)}
+                        >
+                          <Ionicons name="create-outline" size={20} color={colors.primary} />
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[styles.actionButton, { backgroundColor: '#E74C3C20' }]}
+                          onPress={() => handleDeleteEvent(event)}
+                        >
+                          <Ionicons name="trash-outline" size={20} color="#E74C3C" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={[styles.emptyContainer, { backgroundColor: colors.surface }]}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.emptyIcon}
               >
-                <Ionicons name="add" size={20} color="#fff" />
-                <Text style={styles.createButtonText}>Crear Evento</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-      </ScrollView>
+                <Ionicons name="calendar-outline" size={40} color="#fff" />
+              </LinearGradient>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {selectedFilter === 'all' && 'No tienes eventos creados'}
+                {selectedFilter === 'upcoming' && 'No tienes eventos próximos'}
+                {selectedFilter === 'past' && 'No tienes eventos finalizados'}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: colors.subtext }]}>
+                {selectedFilter === 'all' 
+                  ? 'Crea tu primer evento y comienza a organizar experiencias increíbles'
+                  : 'Cambia el filtro para ver otros eventos'
+                }
+              </Text>
+              {selectedFilter === 'all' && (
+                <TouchableOpacity
+                  style={[styles.createButton, { backgroundColor: colors.primary }]}
+                  onPress={handleCreateEvent}
+                >
+                  <Ionicons name="add" size={20} color="#fff" />
+                  <Text style={styles.createButtonText}>Crear Evento</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 };
@@ -647,6 +628,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 16,
   },
 });
 

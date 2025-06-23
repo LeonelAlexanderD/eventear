@@ -2,8 +2,9 @@ import { RootStackParamList } from '@/App';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
@@ -19,6 +20,7 @@ import {
     View
 } from 'react-native';
 import { useTheme } from '../../contexts/ThemeContext';
+import { eventServices } from '../../lib/services';
 import { Event } from '../../types/event';
 
 const { width } = Dimensions.get('window');
@@ -40,81 +42,26 @@ const FavoritesScreen = ({ navigation }: FavoritesScreenProps) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [favoriteEvents, setFavoriteEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const searchOpacity = useState(new Animated.Value(0))[0];
 
-  // Datos hardcodeados de eventos favoritos
-  const favoriteEvents: Event[] = [
-    {
-      id: '1',
-      creator_id: 'creator1',
-      title: 'Concierto de Jazz en el Parque',
-      description: 'Una tarde de jazz al aire libre con los mejores músicos locales',
-      image_url: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&h=600&fit=crop',
-      date: '2024-12-10',
-      time: '17:00',
-      location: 'Parque Central',
-      ticket_price: 0,
-      // category: 'music',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '2',
-      creator_id: 'creator2',
-      title: 'Festival Gastronómico',
-      description: 'Degustación de platos típicos y cocina internacional',
-      image_url: 'https://images.unsplash.com/photo-1414016642750-7fdd78dc33d9?w=800&h=600&fit=crop',
-      date: '2024-12-22',
-      time: '12:00',
-      location: 'Plaza Mayor',
-      ticket_price: 800,
-      // category: 'food',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '3',
-      creator_id: 'creator3',
-      title: 'Exposición de Fotografía',
-      description: 'Muestra de fotografía contemporánea local',
-      image_url: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=800&h=600&fit=crop',
-      date: '2024-12-30',
-      time: '14:00',
-      location: 'Centro Cultural',
-      ticket_price: 300,
-      // category: 'art',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '4',
-      creator_id: 'creator4',
-      title: 'Torneo de Ajedrez',
-      description: 'Competencia abierta para todas las edades y niveles',
-      image_url: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?w=800&h=600&fit=crop',
-      date: '2024-12-15',
-      time: '10:00',
-      location: 'Club Social',
-      ticket_price: 150,
-      // category: 'sports',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: '5',
-      creator_id: 'creator5',
-      title: 'Conferencia de Tecnología',
-      description: 'Charlas sobre las últimas tendencias en desarrollo y diseño',
-      image_url: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800&h=600&fit=crop',
-      date: '2024-12-18',
-      time: '09:00',
-      location: 'Centro de Convenciones',
-      ticket_price: 500,
-      // category: 'tech',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+  useEffect(() => {
+    loadFavoriteEvents();
+  }, []);
+
+  const loadFavoriteEvents = async () => {
+    try {
+      setLoading(true);
+      const events = await eventServices.getFavoriteEvents();
+      setFavoriteEvents(events);
+    } catch (error) {
+      console.error('Error cargando eventos favoritos:', error);
+      Alert.alert('Error', 'No se pudieron cargar los eventos favoritos');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const categories: Category[] = [
     { id: 'all', name: 'Todos', icon: 'grid-outline', color: '#667eea' },
@@ -147,10 +94,8 @@ const FavoritesScreen = ({ navigation }: FavoritesScreenProps) => {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simular carga de datos
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 1000);
+    await loadFavoriteEvents();
+    setRefreshing(false);
   };
 
   const handleEventPress = (event: Event) => {
@@ -219,7 +164,7 @@ const FavoritesScreen = ({ navigation }: FavoritesScreenProps) => {
       >
         <View style={styles.eventImageContainer}>
           <Image 
-            source={{ uri: item.image_url ||'' }} 
+            source={{ uri: item.image_url || 'https://via.placeholder.com/400x200' }} 
             style={styles.eventImage}
             resizeMode="cover"
           />
@@ -323,7 +268,7 @@ const FavoritesScreen = ({ navigation }: FavoritesScreenProps) => {
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Mis Favoritos</Text>
             <Text style={styles.headerSubtitle}>
-              {favoriteEvents.length} eventos guardados
+              {loading ? 'Cargando...' : `${favoriteEvents.length} eventos guardados`}
             </Text>
           </View>
           
@@ -364,100 +309,109 @@ const FavoritesScreen = ({ navigation }: FavoritesScreenProps) => {
         )}
       </LinearGradient>
 
-      {/* Categorías */}
-      <View style={[styles.categoriesContainer, { backgroundColor: colors.surface }]}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesScrollContent}
-        >
-          {categories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              style={[
-                styles.categoryButton,
-                selectedCategory === category.id && { backgroundColor: category.color },
-                selectedCategory === null && category.id === 'all' && { backgroundColor: category.color }
-              ]}
-              onPress={() => handleCategorySelect(category.id)}
-            >
-              <Ionicons 
-                name={category.icon} 
-                size={18} 
-                color={(selectedCategory === category.id || (selectedCategory === null && category.id === 'all')) 
-                  ? '#fff' 
-                  : category.color} 
-              />
-              <Text 
-                style={[
-                  styles.categoryButtonText,
-                  { color: (selectedCategory === category.id || (selectedCategory === null && category.id === 'all')) 
-                    ? '#fff' 
-                    : colors.text }
-                ]}
-              >
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      {/* Lista de eventos */}
-      {filteredEvents.length > 0 ? (
-        <FlatList
-          data={filteredEvents}
-          renderItem={renderEventCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.eventsList}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
-            />
-          }
-        />
+      {loading ? (
+        <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.loadingText, { color: colors.text }]}>Cargando favoritos...</Text>
+        </View>
       ) : (
-        <ScrollView 
-          contentContainerStyle={styles.emptyContainer}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={[colors.primary]}
-              tintColor={colors.primary}
+        <>
+          {/* Categorías */}
+          <View style={[styles.categoriesContainer, { backgroundColor: colors.surface }]}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesScrollContent}
+            >
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
+                  style={[
+                    styles.categoryButton,
+                    selectedCategory === category.id && { backgroundColor: category.color },
+                    selectedCategory === null && category.id === 'all' && { backgroundColor: category.color }
+                  ]}
+                  onPress={() => handleCategorySelect(category.id)}
+                >
+                  <Ionicons 
+                    name={category.icon} 
+                    size={18} 
+                    color={(selectedCategory === category.id || (selectedCategory === null && category.id === 'all')) 
+                      ? '#fff' 
+                      : category.color} 
+                  />
+                  <Text 
+                    style={[
+                      styles.categoryButtonText,
+                      { color: (selectedCategory === category.id || (selectedCategory === null && category.id === 'all')) 
+                        ? '#fff' 
+                        : colors.text }
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Lista de eventos */}
+          {filteredEvents.length > 0 ? (
+            <FlatList
+              data={filteredEvents}
+              renderItem={renderEventCard}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.eventsList}
+              showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
+              }
             />
-          }
-        >
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            style={styles.emptyIcon}
-          >
-            <Ionicons name="heart-outline" size={40} color="#fff" />
-          </LinearGradient>
-          <Text style={[styles.emptyTitle, { color: colors.text }]}>
-            {searchQuery 
-              ? 'No se encontraron resultados' 
-              : selectedCategory 
-                ? 'No hay favoritos en esta categoría' 
-                : 'No tienes favoritos guardados'}
-          </Text>
-          <Text style={[styles.emptySubtitle, { color: colors.subtext }]}>
-            {searchQuery 
-              ? 'Intenta con otra búsqueda o cambia los filtros' 
-              : 'Guarda eventos que te interesen para acceder rápidamente a ellos'}
-          </Text>
-          <TouchableOpacity
-            style={[styles.exploreButton, { backgroundColor: colors.primary }]}
-            onPress={() => navigation.navigate('Home')}
-          >
-            <Ionicons name="compass" size={20} color="#fff" />
-            <Text style={styles.exploreButtonText}>Explorar Eventos</Text>
-          </TouchableOpacity>
-        </ScrollView>
+          ) : (
+            <ScrollView 
+              contentContainerStyle={styles.emptyContainer}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
+              }
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.emptyIcon}
+              >
+                <Ionicons name="heart-outline" size={40} color="#fff" />
+              </LinearGradient>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                {searchQuery 
+                  ? 'No se encontraron resultados' 
+                  : selectedCategory 
+                    ? 'No hay favoritos en esta categoría' 
+                    : 'No tienes favoritos guardados'}
+              </Text>
+              <Text style={[styles.emptySubtitle, { color: colors.subtext }]}>
+                {searchQuery 
+                  ? 'Intenta con otra búsqueda o cambia los filtros' 
+                  : 'Guarda eventos que te interesen para acceder rápidamente a ellos'}
+              </Text>
+              <TouchableOpacity
+                style={[styles.exploreButton, { backgroundColor: colors.primary }]}
+                onPress={() => navigation.navigate('Home')}
+              >
+                <Ionicons name="search-outline" size={20} color="#fff" />
+                <Text style={styles.exploreButtonText}>Explorar Eventos</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+        </>
       )}
     </SafeAreaView>
   );
@@ -669,6 +623,17 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  loadingText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginTop: 16,
   },
 });
 
