@@ -188,6 +188,23 @@ export const eventServices = {
       console.error('Error eliminando evento:', error);
       throw error;
     }
+  },
+
+  // Obtener el último evento creado (no cancelado ni finalizado)
+  async getLastActiveEvent(): Promise<Event | null> {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .not('status', 'in', '(cancelled,finished)')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return data && data.length > 0 ? data[0] : null;
+    } catch (error) {
+      console.error('Error obteniendo el último evento activo:', error);
+      return null;
+    }
   }
 };
 

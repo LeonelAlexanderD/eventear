@@ -411,7 +411,7 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({
         <ScrollView
           style={styles.content}
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 140 }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Sección de imagen */}
@@ -807,144 +807,49 @@ export const CreateEventScreen: React.FC<CreateEventScreenProps> = ({
             />
           )}
 
-          <RequiredLabel label="Ubicación" />
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={eventData.location}
-            onChangeText={(text) =>
-              setEventData((prev) => ({ ...prev, location: text }))
-            }
-            placeholder="Dirección del evento"
-            placeholderTextColor={colors.subtext}
-          />
-
-          <Text style={[styles.label, { color: colors.subtext }]}>
-            Precio de entrada
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={eventData.ticket_price?.toString() || ""}
-            onChangeText={(text) => {
-              const price = text === "" ? undefined : parseFloat(text);
-              if (text === "" || (!isNaN(price!) && price! >= 0)) {
-                setEventData((prev) => ({ ...prev, ticket_price: price }));
-              }
-            }}
-            placeholder="Dejar vacío si es gratuito"
-            placeholderTextColor={colors.subtext}
-            keyboardType="numeric"
-          />
-
-          <Text style={[styles.label, { color: colors.subtext }]}>
-            Stock de entradas
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={eventData.ticket_stock?.toString() || ""}
-            onChangeText={(text) => {
-              const stock = text === "" ? undefined : parseInt(text);
-              if (text === "" || (!isNaN(stock!) && stock! >= 0)) {
-                setEventData((prev) => ({ ...prev, ticket_stock: stock }));
-              }
-            }}
-            placeholder="Dejar vacío si no aplica"
-            placeholderTextColor={colors.subtext}
-            keyboardType="numeric"
-          />
-
-          <Text style={[styles.label, { color: colors.subtext }]}>
-            Punto de venta
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={eventData.ticket_sale_location}
-            onChangeText={(text) =>
-              setEventData((prev) => ({ ...prev, ticket_sale_location: text }))
-            }
-            placeholder="Requerido si el evento es pago"
-            placeholderTextColor={colors.subtext}
-          />
-
-          <Text style={[styles.label, { color: colors.subtext }]}>
-            Anuncio especial
-          </Text>
-          <TextInput
-            style={[
-              styles.input,
-              {
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-                color: colors.text,
-              },
-            ]}
-            value={eventData.announcement}
-            onChangeText={(text) =>
-              setEventData((prev) => ({ ...prev, announcement: text }))
-            }
-            placeholder="Anuncio opcional"
-            placeholderTextColor={colors.subtext}
-          />
-
           <RequiredLabel label="Categorías" />
-          <View style={styles.categoriesContainer}>
-            {categories.map((category) => (
-              <TouchableOpacity
-                key={category.id}
-                style={[
-                  styles.categoryChip,
-                  selectedCategories.some((cat) => cat.id === category.id) &&
-                    styles.selectedCategoryChip,
-                  { borderColor: colors.primary },
-                ]}
-                onPress={() => toggleCategory(category)}
-              >
-                <Text
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesScrollView}
+          >
+            <View style={styles.categoriesContainer}>
+              {categories.map((category) => (
+                <TouchableOpacity
+                  key={category.id}
                   style={[
-                    styles.categoryChipText,
+                    styles.categoryChip,
                     selectedCategories.some((cat) => cat.id === category.id) &&
-                      styles.selectedCategoryChipText,
+                      styles.selectedCategoryChip,
                     {
-                      color: selectedCategories.some(
+                      backgroundColor: selectedCategories.some(
                         (cat) => cat.id === category.id
                       )
-                        ? "#fff"
-                        : colors.text,
+                        ? colors.primary
+                        : colors.surface,
+                      borderColor: colors.border,
                     },
                   ]}
+                  onPress={() => toggleCategory(category)}
                 >
-                  {category.name}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      {
+                        color: selectedCategories.some(
+                          (cat) => cat.id === category.id
+                        )
+                          ? "#fff"
+                          : colors.text,
+                      },
+                    ]}
+                  >
+                    {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1219,21 +1124,23 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   categoryChip: {
-    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderWidth: 1,
     marginRight: 8,
     marginBottom: 8,
   },
   selectedCategoryChip: {
-    backgroundColor: "#007AFF",
-    borderColor: "#007AFF",
+    borderWidth: 1,
   },
   categoryChipText: {
     fontSize: 14,
+    fontWeight: "600",
   },
-  selectedCategoryChipText: {
-    color: "#fff",
+  categoriesScrollView: {
+    paddingRight: 16,
   },
 });

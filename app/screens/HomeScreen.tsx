@@ -1,24 +1,24 @@
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Session } from '@supabase/supabase-js';
-import React, { useEffect, useState } from 'react';
-import { 
-  FlatList, 
-  RefreshControl, 
-  SafeAreaView, 
-  StyleSheet, 
-  Text, 
-  TouchableOpacity, 
-  View,
-  Image,
-  Dimensions,
-  ScrollView
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import {
+  Dimensions,
+  FlatList,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { RootStackParamList } from '../../App';
 // import { EventCarousel } from '../../components/EventCarousel';
 import { EventList } from '../../components/EventList';
 import { useTheme } from '../../contexts/ThemeContext';
+import { eventServices } from '../../lib/services';
 import { supabase } from '../../lib/supabase';
 import { Event } from '../../types/event';
 
@@ -40,10 +40,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const { theme, toggleTheme, colors } = useTheme();
+  const [lastActiveEvent, setLastActiveEvent] = useState<Event | null>(null);
 
   useEffect(() => {
     fetchEvents();
     checkSession();
+    fetchLastActiveEvent();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -100,6 +102,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     }
   };
 
+  const fetchLastActiveEvent = async () => {
+    const event = await eventServices.getLastActiveEvent();
+    setLastActiveEvent(event);
+  };
+
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchEvents();
@@ -130,11 +137,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.bannerTextContainer}>
             <Text style={styles.bannerTitle}>🎉 ¡Evento Especial!</Text>
             <Text style={styles.bannerSubtitle}>
-              {featuredEvent ? featuredEvent.title : 'Descubre eventos increíbles'}
+              {lastActiveEvent ? lastActiveEvent.title : 'Descubre eventos increíbles'}
             </Text>
             <TouchableOpacity 
               style={styles.bannerButton}
-              onPress={() => featuredEvent && handleEventPress(featuredEvent)}
+              onPress={() => lastActiveEvent && handleEventPress(lastActiveEvent)}
             >
               <Text style={styles.bannerButtonText}>Ver Detalles</Text>
               <Ionicons name="arrow-forward" size={16} color="#fff" />
