@@ -199,13 +199,57 @@ export const eventServices = {
         .not('status', 'in', '(cancelled,finished)')
         .order('created_at', { ascending: false })
         .limit(1);
+
       if (error) throw error;
-      return data && data.length > 0 ? data[0] : null;
+      return data?.[0] || null;
     } catch (error) {
-      console.error('Error obteniendo el último evento activo:', error);
+      console.error('Error obteniendo último evento activo:', error);
       return null;
     }
-  }
+  },
+
+  // Obtener conteo de eventos programados para esta semana
+  async getThisWeekEventsCount(): Promise<number> {
+    try {
+      const today = new Date();
+      const endOfWeek = new Date(today);
+      endOfWeek.setDate(today.getDate() + 7);
+
+      const { count, error } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .not('status', 'in', '(cancelled,finished)')
+        .gte('date', today.toISOString().split('T')[0])
+        .lte('date', endOfWeek.toISOString().split('T')[0]);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error obteniendo conteo de eventos de esta semana:', error);
+      return 0;
+    }
+  },
+
+  // Obtener conteo de eventos programados para este mes
+  async getThisMonthEventsCount(): Promise<number> {
+    try {
+      const today = new Date();
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+      const { count, error } = await supabase
+        .from('events')
+        .select('*', { count: 'exact', head: true })
+        .not('status', 'in', '(cancelled,finished)')
+        .gte('date', today.toISOString().split('T')[0])
+        .lte('date', endOfMonth.toISOString().split('T')[0]);
+
+      if (error) throw error;
+      return count || 0;
+    } catch (error) {
+      console.error('Error obteniendo conteo de eventos de este mes:', error);
+      return 0;
+    }
+  },
 };
 
 // Servicios para estadísticas del usuario
